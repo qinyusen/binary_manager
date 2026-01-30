@@ -1,0 +1,13 @@
+{
+  "app_name": "my_app",
+  "version": "1.0.0",
+  "settings": {
+    "debug": true,
+    "max_connections": 10
+  },
+  "features": [
+    "feature1",
+    "feature2",
+    "feature3"
+  ]
+}

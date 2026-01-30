@@ -1,0 +1,23 @@
+{
+  "package_name": "simple_calculator",
+  "version": "1.0.0",
+  "created_at": "2026-01-30T15:21:39.704787Z",
+  "file_info": {
+    "archive_name": "simple_calculator_v1.0.0.zip",
+    "size": 674,
+    "file_count": 2,
+    "hash": "sha256:dfcf373bc98606439ebec65818b4a9a154997b19a3d20f35e7f81a05cda5e01e"
+  },
+  "files": [
+    {
+      "path": "README.md",
+      "size": 192,
+      "hash": "sha256:0bb86827a119e4abc0c52cdc588932557586ba026a041a2392975ad7d8334e4f"
+    },
+    {
+      "path": "calculator.py",
+      "size": 646,
+      "hash": "sha256:2fd7cad24c7fd0c40f3c8d61af35e8b0530b24dbe001a739744d8817ab10a0d2"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "package_name": "file_tool",
+  "version": "1.0.0",
+  "created_at": "2026-01-30T15:21:39.773768Z",
+  "file_info": {
+    "archive_name": "file_tool_v1.0.0.zip",
+    "size": 1298,
+    "file_count": 2,
+    "hash": "sha256:164c3dc29e644a0318d0954850495648bfc19a11e7a027bcdfdb854b30f9497d"
+  },
+  "files": [
+    {
+      "path": "README.md",
+      "size": 858,
+      "hash": "sha256:f1b7a4ad420526c9dfef062e1a74e22be29ff10f9b22a68d249f5bfbf681a720"
+    },
+    {
+      "path": "file_tool.py",
+      "size": 2076,
+      "hash": "sha256:86187cad5879db40195af5d714082cbb743ff281f9ce0a483e5196cad828a952"
+    }
+  ]
+}

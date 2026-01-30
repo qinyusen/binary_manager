@@ -1,0 +1,28 @@
+{
+  "package_name": "web_app_demo",
+  "version": "1.0.0",
+  "created_at": "2026-01-30T15:21:39.739953Z",
+  "file_info": {
+    "archive_name": "web_app_demo_v1.0.0.zip",
+    "size": 1662,
+    "file_count": 3,
+    "hash": "sha256:775ccce3523dd99d9af01e891f4c56057101cb54e8a44d514372844f904fdaba"
+  },
+  "files": [
+    {
+      "path": "server.py",
+      "size": 749,
+      "hash": "sha256:de76f86e94c0322036c3810286259c6627c601fff4f7b8048da4d0e80622d2e2"
+    },
+    {
+      "path": "index.html",
+      "size": 1720,
+      "hash": "sha256:e8f287f55ae996f4b434b94a1bfcfdc261583eaf759c7c54c4562b2b67abac2b"
+    },
+    {
+      "path": "README.md",
+      "size": 477,
+      "hash": "sha256:74d2de6c5bd75e25c7a80724ad66dc8dc42cc324c6344fa2864ab94790b238d9"
+    }
+  ]
+}
