@@ -1,0 +1,24 @@
+{
+  "database": {
+    "path": "./database/binary_manager.db"
+  },
+  "s3": {
+    "enabled": false,
+    "bucket": "your-bucket-name",
+    "access_key": "",
+    "secret_key": "",
+    "region": "us-east-1"
+  },
+  "cache": {
+    "enabled": true,
+    "packages_dir": "./cache/packages",
+    "groups_dir": "./cache/groups"
+  },
+  "publisher": {
+    "default_output_dir": "./releases_v2"
+  },
+  "git": {
+    "enabled": true,
+    "require_clean_repo": false
+  }
+}
