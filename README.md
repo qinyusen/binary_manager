@@ -176,6 +176,99 @@ python3 test_v2_complete.py
 - ✅ Integration（集成测试）
 - ✅ Edge Cases（边界情况测试）
 
+## 📚 示例程序
+
+项目包含完整的示例程序，展示Binary Manager的各种使用场景：
+
+### 1. 简单应用（Simple App）
+一个基本的计算器应用，适合入门学习：
+
+```bash
+# 发布示例应用
+python3 -m binary_manager_v2.cli.main publish \
+    --source ./examples/simple_app \
+    --package-name simple_app \
+    --version 1.0.0
+
+# 下载并运行
+python3 -m binary_manager_v2.cli.main download \
+    --package-name simple_app \
+    --version 1.0.0 \
+    --output ./installed_apps
+
+cd installed_apps/simple_app_v1.0.0
+python3 main.py add 10 5
+```
+
+### 2. Web应用（Web App）
+Web服务器应用示例：
+
+```bash
+python3 -m binary_manager_v2.cli.main publish \
+    --source ./examples/web_app \
+    --package-name web_app \
+    --version 1.0.0
+
+# 下载后运行
+cd installed_apps/web_app_v1.0.0
+python3 server.py
+# 访问 http://localhost:8080
+```
+
+### 3. 命令行工具（CLI Tool）
+功能丰富的CLI工具示例：
+
+```bash
+python3 -m binary_manager_v2.cli.main publish \
+    --source ./examples/cli_tool \
+    --package-name cli_tool \
+    --version 1.0.0
+```
+
+### 4. 嵌入式Linux BSP（BSP Package）
+完整的嵌入式Linux板级支持包示例：
+
+```bash
+# 发布BSP包
+python3 -m binary_manager_v2.cli.main publish \
+    --source ./examples/bsp_package \
+    --package-name rv_board_bsp \
+    --version 1.0.0 \
+    --description "RV-Board-Dev1 Embedded Linux BSP"
+
+# 下载BSP
+python3 -m binary_manager_v2.cli.main download \
+    --package-name rv_board_bsp \
+    --version 1.0.0 \
+    --output ./installed_bsps
+
+# 查看BSP信息
+cat installed_bsps/rv_board_bsp_v1.0.0/board_info.json
+
+# 烧写到SD卡
+cd installed_bsps/rv_board_bsp_v1.0.0
+sudo ./scripts/flash.sh --device /dev/sdX --media sd
+```
+
+### 查看所有示例
+
+```bash
+# 查看示例目录
+ls examples/
+
+# 阅读示例文档
+cat examples/README.md
+cat examples/BSP_README.md
+
+# 运行API使用示例
+python3 examples_usage.py
+```
+
+详细文档：
+- [示例程序总览](examples/README.md)
+- [BSP使用指南](examples/BSP_README.md)
+- [API使用示例](examples_usage.py)
+
 ## 📊 依赖
 
 ```
