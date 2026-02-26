@@ -1,6 +1,9 @@
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, TYPE_CHECKING
 from datetime import datetime
 from ..value_objects import Hash, GitInfo, StorageLocation, PackageName
+
+if TYPE_CHECKING:
+    from .file_info import FileInfo
 
 
 class Package:

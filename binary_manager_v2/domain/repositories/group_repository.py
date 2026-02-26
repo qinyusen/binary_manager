@@ -7,19 +7,23 @@ from ..value_objects import PackageName
 class GroupRepository(ABC):
     
     @abstractmethod
-    def save(self, group: Group) -> Optional[int]:
+    def save(self, group: Group, created_by: str) -> Optional[int]:
+        pass
+    
+    @abstractmethod
+    def find_by_id(self, group_id: int) -> Optional[Group]:
         pass
     
     @abstractmethod
     def find_by_name_and_version(
         self,
-        group_name: PackageName,
+        group_name: str,
         version: str
     ) -> Optional[Group]:
         pass
     
     @abstractmethod
-    def find_by_name(self, group_name: PackageName) -> List[Group]:
+    def find_by_name(self, group_name: str) -> List[Group]:
         pass
     
     @abstractmethod
@@ -27,21 +31,21 @@ class GroupRepository(ABC):
         pass
     
     @abstractmethod
-    def find_all(self) -> List[Group]:
+    def find_all(self, filters: Optional[Dict] = None) -> List[Group]:
         pass
     
     @abstractmethod
-    def add_package_to_group(
+    def add_package(
         self,
         group_id: int,
         package_id: int,
         install_order: int = 0,
         required: bool = True
-    ) -> None:
+    ) -> bool:
         pass
     
     @abstractmethod
-    def get_group_packages(self, group_id: int) -> List[Dict]:
+    def remove_package(self, group_id: int, package_id: int) -> bool:
         pass
     
     @abstractmethod
@@ -49,5 +53,5 @@ class GroupRepository(ABC):
         pass
     
     @abstractmethod
-    def exists(self, group_name: PackageName, version: str) -> bool:
+    def exists(self, group_name: str, version: str) -> bool:
         pass

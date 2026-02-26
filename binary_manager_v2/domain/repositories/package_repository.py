@@ -7,19 +7,23 @@ from ..value_objects import PackageName
 class PackageRepository(ABC):
     
     @abstractmethod
-    def save(self, package: Package, git_info: Dict) -> Optional[int]:
+    def save(self, package: Package) -> Optional[int]:
+        pass
+    
+    @abstractmethod
+    def find_by_id(self, package_id: int) -> Optional[Package]:
         pass
     
     @abstractmethod
     def find_by_name_and_version(
         self,
-        package_name: PackageName,
+        package_name: str,
         version: str
     ) -> Optional[Package]:
         pass
     
     @abstractmethod
-    def find_by_name(self, package_name: PackageName) -> List[Package]:
+    def find_by_name(self, package_name: str) -> List[Package]:
         pass
     
     @abstractmethod
@@ -31,7 +35,7 @@ class PackageRepository(ABC):
         pass
     
     @abstractmethod
-    def find_all(self) -> List[Package]:
+    def find_all(self, filters: Optional[Dict] = None) -> List[Package]:
         pass
     
     @abstractmethod
@@ -39,5 +43,5 @@ class PackageRepository(ABC):
         pass
     
     @abstractmethod
-    def exists(self, package_name: PackageName, version: str, git_commit: str) -> bool:
+    def exists(self, package_name: str, version: str, git_commit: Optional[str] = None) -> bool:
         pass

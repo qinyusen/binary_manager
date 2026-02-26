@@ -12,7 +12,9 @@ class GitInfo:
         author: Optional[str] = None,
         author_email: Optional[str] = None,
         commit_time: Optional[str] = None,
-        is_dirty: bool = False
+        is_dirty: bool = False,
+        commit_message: Optional[str] = None,
+        remotes: Optional[list] = None
     ):
         self._commit_hash = commit_hash
         self._commit_short = commit_short
@@ -22,6 +24,8 @@ class GitInfo:
         self._author_email = author_email
         self._commit_time = commit_time
         self._is_dirty = is_dirty
+        self._commit_message = commit_message
+        self._remotes = remotes or []
     
     @property
     def commit_hash(self) -> str:
@@ -55,6 +59,14 @@ class GitInfo:
     def is_dirty(self) -> bool:
         return self._is_dirty
     
+    @property
+    def commit_message(self) -> Optional[str]:
+        return self._commit_message
+    
+    @property
+    def remotes(self) -> list:
+        return self._remotes.copy()
+    
     def to_dict(self) -> dict:
         return {
             'commit_hash': self._commit_hash,
@@ -64,7 +76,9 @@ class GitInfo:
             'author': self._author,
             'author_email': self._author_email,
             'commit_time': self._commit_time,
-            'is_dirty': self._is_dirty
+            'is_dirty': self._is_dirty,
+            'commit_message': self._commit_message,
+            'remotes': self._remotes
         }
     
     @classmethod
@@ -77,7 +91,9 @@ class GitInfo:
             author=data.get('author'),
             author_email=data.get('author_email'),
             commit_time=data.get('commit_time'),
-            is_dirty=data.get('is_dirty', False)
+            is_dirty=data.get('is_dirty', False),
+            commit_message=data.get('commit_message'),
+            remotes=data.get('remotes', [])
         )
     
     def __eq__(self, other) -> bool:
