@@ -1,0 +1,66 @@
+{
+  "bsp_name": "RV-Board-Dev1",
+  "bsp_version": "1.0.0",
+  "architecture": "aarch64",
+  "soc": "RV-SOC-1000",
+  "cpu": "ARM Cortex-A53",
+  "cpu_cores": 4,
+  "cpu_frequency": "1.2GHz",
+  "memory": {
+    "type": "DDR4",
+    "size": "1GB",
+    "frequency": "1600MHz"
+  },
+  "storage": {
+    "emmc": "8GB",
+    "sd_card": "Support up to 128GB"
+  },
+  "network": {
+    "ethernet": "10/100/1000 Mbps",
+    "wifi": "Optional (USB dongle)"
+  },
+  "peripherals": {
+    "uart": 4,
+    "spi": 2,
+    "i2c": 2,
+    "gpio": 20,
+    "usb": "2x USB 2.0 Host",
+    "hdmi": "1x HDMI 1.4"
+  },
+  "software": {
+    "kernel": {
+      "version": "6.1.x",
+      "type": "mainline",
+      "patches": ["PREEMPT_RT"]
+    },
+    "bootloader": {
+      "name": "U-Boot",
+      "version": "2023.01",
+      "features": ["SPL", "Network boot", "UEFI"]
+    },
+    "rootfs": {
+      "distro": "Buildroot",
+      "version": "2023.02",
+      "type": "ext4",
+      "tools": ["Python", "SSH", "Git", "Vim"]
+    }
+  },
+  "supported_boards": [
+    "RV-Board-Dev1",
+    "RV-Board-Dev1-RevB"
+  ],
+  "compatibility": {
+    "min_host_os": "Ubuntu 20.04",
+    "cross_compiler": "gcc-aarch64-linux-gnu",
+    "required_tools": [
+      "device-tree-compiler",
+      "u-boot-tools",
+      "build-essential",
+      "git"
+    ]
+  },
+  "author": "BSP Team",
+  "license": "GPL v2",
+  "homepage": "https://example.com/bsp/rv-board",
+  "documentation": "docs/README.md"
+}

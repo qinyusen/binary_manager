@@ -1,0 +1,190 @@
+/dts-v1/;
+
+/ {
+    model = "RV-Board-Dev1";
+    compatible = "rv,soc-1000", "arm,cortex-a53";
+
+    #address-cells = <2>;
+    #size-cells = <2>;
+
+    chosen {
+        stdout-path = "serial0:115200n8";
+        bootargs = "console=ttyS0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait";
+    };
+
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x0 0x80000000 0x0 0x40000000>; /* 1GB */
+    };
+
+    cpus {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        cpu0: cpu@0 {
+            device_type = "cpu";
+            compatible = "arm,cortex-a53";
+            reg = <0x0>;
+            enable-method = "psci";
+            next-level-cache = <&L2_0>;
+            cpu-idle-states = <&CPU_SLEEP_0>;
+        };
+
+        cpu1: cpu@1 {
+            device_type = "cpu";
+            compatible = "arm,cortex-a53";
+            reg = <0x1>;
+            enable-method = "psci";
+            next-level-cache = <&L2_0>;
+            cpu-idle-states = <&CPU_SLEEP_0>;
+        };
+
+        cpu2: cpu@2 {
+            device_type = "cpu";
+            compatible = "arm,cortex-a53";
+            reg = <0x2>;
+            enable-method = "psci";
+            next-level-cache = <&L2_0>;
+            cpu-idle-states = <&CPU_SLEEP_0>;
+        };
+
+        cpu3: cpu@3 {
+            device_type = "cpu";
+            compatible = "arm,cortex-a53";
+            reg = <0x3>;
+            enable-method = "psci";
+            next-level-cache = <&L2_0>;
+            cpu-idle-states = <&CPU_SLEEP_0>;
+        };
+
+        idle-states {
+            entry-method = "psci";
+
+            CPU_SLEEP_0: cpu-sleep-0 {
+                compatible = "arm,idle-state";
+                idle-state-name = "cpu-retention";
+                arm,psci-suspend-param = <0x00000001>;
+                entry-latency-us = <50>;
+                exit-latency-us = <100>;
+                min-residency-us = <300>;
+            };
+        };
+
+        L2_0: l2-cache0 {
+            compatible = "cache";
+            cache-level = <2>;
+            cache-size = <0x80000>;
+            cache-line-size = <64>;
+            cache-sets = <512>;
+        };
+    };
+
+    psci {
+        compatible = "arm,psci-1.0";
+        method = "smc";
+    };
+
+    timer {
+        compatible = "arm,armv8-timer";
+        interrupts = <1 13 0xf08>,
+                     <1 14 0xf08>,
+                     <1 11 0xf08>,
+                     <1 10 0xf08>;
+        clock-frequency = <24000000>;
+    };
+
+    soc {
+        compatible = "simple-bus";
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+
+        uart0: serial@80120000 {
+            compatible = "arm,pl011", "arm,primecell";
+            reg = <0x0 0x80120000 0x0 0x1000>;
+            interrupts = <0 50 4>;
+            clocks = <&clk24mhz>, <&clk24mhz>;
+            clock-names = "uartclk", "apb_pclk";
+            status = "okay";
+        };
+
+        uart1: serial@80121000 {
+            compatible = "arm,pl011", "arm,primecell";
+            reg = <0x0 0x80121000 0x0 0x1000>;
+            interrupts = <0 51 4>;
+            clocks = <&clk24mhz>, <&clk24mhz>;
+            clock-names = "uartclk", "apb_pclk";
+            status = "okay";
+        };
+
+        gpio0: gpio@80120000 {
+            compatible = "rv,gpio";
+            reg = <0x0 0x80120000 0x0 0x1000>;
+            interrupts = <0 60 4>;
+            gpio-controller;
+            #gpio-cells = <2>;
+            status = "okay";
+        };
+
+        spi0: spi@80122000 {
+            compatible = "rv,spi";
+            reg = <0x0 0x80122000 0x0 0x1000>;
+            interrupts = <0 70 4>;
+            clocks = <&clk24mhz>;
+            #address-cells = <1>;
+            #size-cells = <0>;
+            status = "okay";
+        };
+
+        i2c0: i2c@80123000 {
+            compatible = "rv,i2c";
+            reg = <0x0 0x80123000 0x0 0x1000>;
+            interrupts = <0 80 4>;
+            clocks = <&clk24mhz>;
+            #address-cells = <1>;
+            #size-cells = <0>;
+            status = "okay";
+        };
+
+        ethernet@80200000 {
+            compatible = "rv,eth";
+            reg = <0x0 0x80200000 0x0 0x10000>;
+            interrupts = <0 90 4>;
+            phy-mode = "rgmii-id";
+            phy-handle = <&phy0>;
+            status = "okay";
+
+            mdio {
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                phy0: ethernet-phy@0 {
+                    reg = <0>;
+                    max-speed = <1000>;
+                };
+            };
+        };
+
+        mmc@80300000 {
+            compatible = "rv,sdhci";
+            reg = <0x0 0x80300000 0x0 0x10000>;
+            interrupts = <0 100 4>;
+            bus-width = <8>;
+            status = "okay";
+        };
+
+        usb@80400000 {
+            compatible = "rv,usb";
+            reg = <0x0 0x80400000 0x0 0x10000>;
+            interrupts = <0 110 4>;
+            status = "okay";
+        };
+    };
+
+    clk24mhz: clk24mhz {
+        compatible = "fixed-clock";
+        #clock-cells = <0>;
+        clock-frequency = <24000000>;
+        clock-output-names = "clk24mhz";
+    };
+};

@@ -1,0 +1,147 @@
+{
+  "manifest_version": "1.0",
+  "bsp": {
+    "name": "rv_board_bsp",
+    "version": "1.0.0",
+    "description": "RV-Board-Dev1 Embedded Linux BSP"
+  },
+  "components": [
+    {
+      "name": "kernel",
+      "version": "6.1.0",
+      "type": "kernel",
+      "files": [
+        {
+          "path": "kernel/Image",
+          "description": "Kernel image",
+          "format": "binary",
+          "load_address": "0x80080000"
+        },
+        {
+          "path": "kernel/configs/rv_board_defconfig",
+          "description": "Kernel configuration",
+          "format": "text"
+        }
+      ],
+      "hash_algorithm": "sha256"
+    },
+    {
+      "name": "bootloader",
+      "version": "2023.01",
+      "type": "bootloader",
+      "files": [
+        {
+          "path": "bootloader/u-boot.bin",
+          "description": "U-Boot binary",
+          "format": "binary",
+          "load_address": "0x80000000"
+        },
+        {
+          "path": "bootloader/spl/spl.bin",
+          "description": "SPL binary",
+          "format": "binary",
+          "load_address": "0x43E00000"
+        }
+      ],
+      "hash_algorithm": "sha256"
+    },
+    {
+      "name": "rootfs",
+      "version": "2023.02",
+      "type": "rootfs",
+      "files": [
+        {
+          "path": "rootfs/rootfs.ext4",
+          "description": "Root filesystem",
+          "format": "ext4",
+          "size": "64MB"
+        }
+      ],
+      "hash_algorithm": "sha256"
+    },
+    {
+      "name": "drivers",
+      "version": "1.0.0",
+      "type": "kernel_modules",
+      "files": [
+        {
+          "path": "drivers/gpio_driver.ko",
+          "description": "GPIO driver module",
+          "format": "kernel_module"
+        },
+        {
+          "path": "drivers/spi_driver.ko",
+          "description": "SPI driver module",
+          "format": "kernel_module"
+        }
+      ],
+      "hash_algorithm": "sha256"
+    }
+  ],
+  "device_trees": [
+    {
+      "name": "rv-board-dev1",
+      "file": "configs/rv-board-dev1.dtb",
+      "description": "Main device tree"
+    },
+    {
+      "name": "rv-board-dev1-lcd",
+      "file": "configs/rv-board-dev1-lcd.dtb",
+      "description": "Device tree with LCD overlay"
+    }
+  ],
+  "build_info": {
+    "build_date": "2026-02-26",
+    "build_host": "build-server-01",
+    "cross_compiler": "gcc-aarch64-linux-gnu 11.3.0",
+    "build_tools": {
+      "make": "4.3",
+      "device-tree-compiler": "1.6.1",
+      "u-boot-tools": "2023.01"
+    }
+  },
+  "installation": {
+    "supported_media": ["sd_card", "emmc", "network"],
+    "partition_layout": "gpt",
+    "partitions": [
+      {
+        "name": "spl",
+        "size": "1MB",
+        "type": "RAW",
+        "file": "bootloader/spl/spl.bin"
+      },
+      {
+        "name": "uboot",
+        "size": "2MB",
+        "type": "RAW",
+        "file": "bootloader/u-boot.bin"
+      },
+      {
+        "name": "kernel",
+        "size": "16MB",
+        "type": "ext4",
+        "file": "kernel/Image"
+      },
+      {
+        "name": "rootfs",
+        "size": "512MB",
+        "type": "ext4",
+        "file": "rootfs/rootfs.ext4"
+      }
+    ]
+  },
+  "verification": {
+    "integrity_check": true,
+    "signature_verification": false,
+    "test_suite": "scripts/test_bsp.sh"
+  },
+  "changelog": {
+    "1.0.0": [
+      "Initial BSP release",
+      "Linux 6.1 kernel with PREEMPT_RT",
+      "U-Boot 2023.01 with SPL",
+      "Buildroot 2023.02 rootfs",
+      "Full peripheral driver support"
+    ]
+  }
+}
