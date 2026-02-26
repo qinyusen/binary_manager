@@ -63,7 +63,27 @@ binary_manager_v2/
 pip install -r requirements.txt
 ```
 
-### 发布包
+### 交互式发布（推荐新手）
+
+使用友好的交互式工具：
+
+```bash
+python3 publish_tool.py
+```
+
+按照提示完成发布，支持：
+- 步骤化引导
+- 智能默认值
+- 实时验证
+- 彩色输出
+
+### 快速发布
+
+```bash
+python3 publish_tool.py --quick ./my_project my_app
+```
+
+### 命令行发布
 
 #### 发布到本地存储
 
@@ -280,9 +300,22 @@ requests>=2.31.0  # HTTP下载
 
 ## 📚 详细文档
 
+### 核心文档
 - [BINARY_MANAGER_V2.md](BINARY_MANAGER_V2.md) - 完整架构文档
 - [V2_QUICKSTART.md](V2_QUICKSTART.md) - 5分钟快速入门
 - [PROJECT_FILES.md](PROJECT_FILES.md) - 项目文件说明
+- [CHANGELOG.md](CHANGELOG.md) - 变更日志
+
+### 使用指南
+- [PUBLISH_TOOL_GUIDE.md](PUBLISH_TOOL_GUIDE.md) - 交互式发布工具指南
+- [SPLIT_PACKAGES_GUIDE.md](SPLIT_PACKAGES_GUIDE.md) - 分包发布指南
+- [examples/README.md](examples/README.md) - 示例程序总览
+- [examples/BSP_README.md](examples/BSP_README.md) - BSP使用指南
+
+### 代码示例
+- [examples_usage.py](examples_usage.py) - API使用示例
+- [examples_split_packages.py](examples_split_packages.py) - 分包发布示例
+- [publish_tool.py](publish_tool.py) - 交互式发布工具
 
 ## 🎯 使用场景
 
