@@ -4,53 +4,47 @@
 
 ## 🎯 项目概述
 
-Binary Manager提供两个版本：
+Binary Manager是一个基于洋葱架构的二进制文件发布和下载管理系统，提供完整的包管理功能。
 
-- **V1** - 基础版本（已稳定）
-- **V2** - 洋葱架构版本（推荐，功能更强大）
+## ✨ 核心特性
 
----
+### 🏗️ 洋葱架构设计
+- **Domain层（领域层）** - 零外部依赖，纯粹的业务逻辑
+- **Infrastructure层（基础设施层）** - 存储、Git、数据库实现
+- **Application层（应用层）** - 业务服务协调
+- **Presentation层（表示层）** - CLI命令行工具
 
-## 📦 V2 版本（推荐）
+### 📦 完整功能
+- ✅ 发布管理（本地存储/S3云存储）
+- ✅ 下载和安装
+- ✅ 分组管理（Group）
+- ✅ Git集成（commit追踪、branch、tag）
+- ✅ SQLite数据库持久化
+- ✅ SHA256哈希验证
+- ✅ 依赖管理
 
-### ✨ 特性
+### 🚀 高性能
+- 依赖精简（总大小仅~6MB）
+- 使用urllib3替代boto3实现S3支持
+- Domain层完全零外部依赖
 
-- **🏗️ 洋葱架构** - 清晰的四层分离设计
-  - Domain层（领域层）- 零外部依赖
-  - Infrastructure层（基础设施层）- 存储、Git、数据库
-  - Application层（应用层）- 业务服务
-  - Presentation层（表示层）- CLI工具
-
-- **📦 完整功能**
-  - 发布管理（本地/S3）
-  - 下载和安装
-  - 分组管理（Group）
-  - Git集成
-  - SQLite数据库
-  - SHA256哈希验证
-
-- **🚀 高性能**
-  - 依赖减少94%（~99MB → ~6MB）
-  - 使用urllib3替代boto3
-  - 纯Python标准库的Domain层
-
-### 📁 V2目录结构
+## 📁 项目结构
 
 ```
 binary_manager_v2/
 ├── domain/                  # 领域层（零外部依赖）
-│   ├── entities/           # 实体
-│   ├── value_objects/      # 值对象
-│   ├── services/           # 领域服务
+│   ├── entities/           # 实体（Package, Version, Group等）
+│   ├── value_objects/      # 值对象（PackageName, Hash, GitInfo等）
+│   ├── services/           # 领域服务（FileScanner, HashCalculator等）
 │   └── repositories/       # 仓储接口
 ├── infrastructure/         # 基础设施层
-│   ├── storage/           # 存储服务（Local/S3）
+│   ├── storage/           # 存储服务（LocalStorage, S3Storage）
 │   ├── git/              # Git服务
-│   └── database/         # 数据库仓储（SQLite）
+│   └── database/         # 数据库仓储实现（SQLite）
 ├── application/           # 应用层
-│   ├── publisher_service.py
-│   ├── downloader_service.py
-│   └── group_service.py
+│   ├── publisher_service.py    # 发布服务
+│   ├── downloader_service.py   # 下载服务
+│   └── group_service.py        # 分组服务
 ├── cli/                  # 表示层
 │   └── main.py          # CLI工具
 ├── shared/              # 共享工具
@@ -61,169 +55,175 @@ binary_manager_v2/
     └── database_schema.sql
 ```
 
-### 🔧 V2 快速开始
+## 🔧 快速开始
 
-#### 安装
+### 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
-#### 发布包
+### 发布包
+
+#### 发布到本地存储
 
 ```bash
-# 发布到本地
-python3 binary_manager_v2/cli/main.py publish \
+python3 -m binary_manager_v2.cli.main publish \
   --source ./my_project \
   --package-name my_app \
-  --version 1.0.0
+  --version 1.0.0 \
+  --description "My Application"
+```
 
-# 发布到S3
-python3 binary_manager_v2/cli/main.py publish \
+#### 发布到S3云存储
+
+```bash
+python3 -m binary_manager_v2.cli.main publish \
   --source ./my_project \
   --package-name my_app \
   --version 1.0.0 \
   --s3-bucket my-bucket
 ```
 
-#### 下载包
+### 下载包
+
+#### 通过配置文件下载
 
 ```bash
-# 通过配置文件下载
-python3 binary_manager_v2/cli/main.py download \
+python3 -m binary_manager_v2.cli.main download \
   --config ./releases/my_app_v1.0.0.json \
   --output ./downloads
+```
 
-# 通过名称和版本下载
-python3 binary_manager_v2/cli/main.py download \
+#### 通过名称和版本下载
+
+```bash
+python3 -m binary_manager_v2.cli.main download \
   --package-name my_app \
   --version 1.0.0 \
   --output ./downloads
+```
 
-# 下载整个分组
-python3 binary_manager_v2/cli/main.py download \
+#### 下载整个分组
+
+```bash
+python3 -m binary_manager_v2.cli.main download \
   --group-id 1 \
   --output ./downloads
 ```
 
-#### 分组管理
+### 分组管理
+
+#### 创建分组
 
 ```bash
-# 创建分组
-python3 binary_manager_v2/cli/main.py group create \
+python3 -m binary_manager_v2.cli.main group create \
   --group-name dev_environment \
   --version 1.0.0 \
-  --packages backend_api:1.0.0 frontend_web:2.0.0
+  --packages backend_api:1.0.0 frontend_web:2.0.0 \
+  --description "Development Environment"
+```
 
-# 列出所有分组
-python3 binary_manager_v2/cli/main.py group list
+#### 列出所有分组
 
-# 导出分组
-python3 binary_manager_v2/cli/main.py group export \
+```bash
+python3 -m binary_manager_v2.cli.main group list
+```
+
+#### 导出分组配置
+
+```bash
+python3 -m binary_manager_v2.cli.main group export \
   --group-id 1 \
   --output ./groups
 ```
 
-#### 列出包
+#### 导入分组配置
 
 ```bash
-# 列出所有包
-python3 binary_manager_v2/cli/main.py list
-
-# 按名称过滤
-python3 binary_manager_v2/cli/main.py list --package-name my_app
+python3 -m binary_manager_v2.cli.main group import \
+  --config ./groups/dev_environment_v1.0.0.json
 ```
 
-### 🧪 V2 测试
+### 列出和管理
+
+#### 列出所有包
+
+```bash
+python3 -m binary_manager_v2.cli.main list
+```
+
+#### 按名称过滤
+
+```bash
+python3 -m binary_manager_v2.cli.main list --package-name my_app
+```
+
+## 🧪 测试
+
+运行完整测试套件：
 
 ```bash
 python3 test_v2_complete.py
 ```
 
-### 📊 V2 依赖
+测试覆盖：
+- ✅ Domain Layer（领域层测试）
+- ✅ Infrastructure Layer（基础设施层测试）
+- ✅ Database Layer（数据库层测试）
+- ✅ Application Layer（应用层测试）
+- ✅ CLI（命令行测试）
+- ✅ Integration（集成测试）
+- ✅ Edge Cases（边界情况测试）
+
+## 📊 依赖
 
 ```
-urllib3>=2.0.0    # HTTP和S3（~1MB）
+urllib3>=2.0.0    # HTTP和S3支持（~1MB）
 requests>=2.31.0  # HTTP下载
 ```
 
-**总依赖大小**: ~6MB（比V1减少94%）
+**总依赖大小**: ~6MB
 
----
+## 📚 详细文档
 
-## 📦 V1 版本（基础版）
+- [BINARY_MANAGER_V2.md](BINARY_MANAGER_V2.md) - 完整架构文档
+- [V2_QUICKSTART.md](V2_QUICKSTART.md) - 5分钟快速入门
+- [PROJECT_FILES.md](PROJECT_FILES.md) - 项目文件说明
 
-### 特性
+## 🎯 使用场景
 
-- 发布器 - 扫描文件、打包zip、生成JSON配置
-- 下载器 - 解析JSON、下载zip、校验解压
-- SHA256哈希验证
-- 详细的文件清单和元信息
+Binary Manager适用于以下场景：
 
-### V1 快速开始
+- ✅ 需要管理多个二进制包的版本
+- ✅ 需要追踪Git commit信息
+- ✅ 需要管理包之间的依赖关系
+- ✅ 需要云存储（S3）支持
+- ✅ 需要分组部署多个相关包
+- ✅ 需要SHA256哈希验证确保完整性
 
-#### 发布包
+## 🔑 核心优势
 
-```bash
-python3 binary_manager/publisher/main.py \
-  --source ./binary_manager/examples/my_app \
-  --output ./releases \
-  --version 1.0.0 \
-  --name my_app
-```
+### 1. 洋葱架构
+- 清晰的层次分离
+- Domain层零外部依赖
+- 易于测试和维护
 
-#### 下载包
+### 2. 完整功能
+- Git集成自动提取commit信息
+- 数据库持久化存储
+- 分组管理批量部署
+- S3云存储支持
 
-```bash
-python3 binary_manager/downloader/main.py \
-  --config ./releases/my_app_v1.0.0.json \
-  --output ./downloads
-```
+### 3. 高性能
+- 精简依赖（仅~6MB）
+- 使用urllib3替代boto3
+- 纯Python标准库的Domain层
 
-### V1 依赖
-
-```
-requests>=2.31.0
-jsonschema>=4.20.0
-tqdm>=4.66.0
-```
-
----
-
-## 📚 文档
-
-- [README.md](README.md) - 本文档
-- [BINARY_MANAGER_V2.md](BINARY_MANAGER_V2.md) - V2详细文档
-- [REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md) - 重构总结
-- [V2_QUICKSTART.md](V2_QUICKSTART.md) - V2快速入门
-- [TUTORIAL.md](TUTORIAL.md) - 使用教程
-
-## 🏗️ 架构对比
-
-| 特性 | V1 | V2 |
-|------|----|----|
-| 基本发布/下载 | ✅ | ✅ |
-| Git集成 | ❌ | ✅ |
-| 数据库支持 | ❌ | ✅ |
-| 分组管理 | ❌ | ✅ |
-| 依赖管理 | ❌ | ✅ |
-| S3存储 | ❌ | ✅（使用urllib3）|
-| 依赖大小 | ~105MB | ~6MB |
-| 架构 | 单体 | 洋葱架构 |
-
-## 🚀 推荐使用场景
-
-### 使用V1如果您：
-- 只需要基本的发布/下载功能
-- 不需要数据库存储
-- 不需要Git集成
-
-### 使用V2如果您：
-- 需要完整的包管理功能
-- 需要Git commit追踪
-- 需要管理多个包的依赖关系
-- 需要S3云存储
-- 关注依赖大小和性能
+### 4. 易用性
+- 简单的CLI命令
+- JSON配置文件
+- 完整的测试覆盖
 
 ## 📝 许可
 

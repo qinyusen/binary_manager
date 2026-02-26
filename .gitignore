@@ -39,3 +39,4 @@ cache/
 test_downloads/
 test_releases/
 installed_apps/
+releases/
