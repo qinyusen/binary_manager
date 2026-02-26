@@ -4,186 +4,257 @@
 
 ```
 .
-├── binary_manager/              # 主目录
+├── binary_manager/              # V1 - 基础版本
 │   ├── publisher/              # 发布器模块
-│   │   ├── __init__.py         # 模块初始化
-│   │   ├── scanner.py          # 文件扫描器
-│   │   ├── packager.py         # 打包器
-│   │   └── main.py             # 发布器CLI
 │   ├── downloader/            # 下载器模块
-│   │   ├── __init__.py         # 模块初始化
-│   │   ├── downloader.py       # 下载器
-│   │   ├── verifier.py         # 校验器
-│   │   └── main.py             # 下载器CLI
-│   ├── examples/               # 示例项目
-│   │   └── my_app/
-│   │       ├── src/            # 源代码
-│   │       │   └── main.py
-│   │       ├── lib/            # 库文件
-│   │       │   └── utils.py
-│   │       ├── data/           # 数据文件
-│   │       │   └── config.json
-│   │       └── README.md       # 示例文档
-│   └── config/                 # 配置文件
-│       └── schema.json         # JSON Schema
-├── install_dependencies.sh      # Ubuntu依赖安装脚本
-├── requirements.txt             # Python依赖列表
-├── test.py                     # 自动化测试脚本
-├── README.md                   # 项目文档
-└── QUICKSTART.md               # 快速开始指南
-
-测试生成目录 (运行test.py后):
-├── test_releases/              # 测试发布的包
-│   ├── test_app_v1.0.0.zip
-│   └── test_app_v1.0.0.json
-└── test_downloads/             # 测试下载的包
-    └── test_app/
-        └── test_app/           # 解压后的文件
+│   └── examples/              # 示例项目
+│
+├── binary_manager_v2/          # V2 - 洋葱架构版本（推荐）
+│   ├── domain/                # Domain层（零外部依赖）
+│   │   ├── entities/          # 实体
+│   │   ├── value_objects/     # 值对象
+│   │   ├── services/          # 领域服务
+│   │   └── repositories/      # 仓储接口
+│   │
+│   ├── infrastructure/        # Infrastructure层
+│   │   ├── storage/          # 存储服务（Local/S3）
+│   │   ├── git/             # Git服务
+│   │   └── database/         # 数据库仓储（SQLite）
+│   │
+│   ├── application/          # Application层
+│   │   ├── publisher_service.py
+│   │   ├── downloader_service.py
+│   │   └── group_service.py
+│   │
+│   ├── cli/                 # Presentation层
+│   │   └── main.py          # CLI工具
+│   │
+│   ├── shared/              # 共享工具
+│   │   ├── logger.py
+│   │   ├── progress.py
+│   │   └── config.py
+│   │
+│   ├── config/              # 配置文件
+│   │   ├── config.json
+│   │   └── database_schema.sql
+│   │
+│   ├── database/            # 数据库文件
+│   │   └── binary_manager.db
+│   │
+│   └── requirements_v2.txt  # V2依赖列表
+│
+├── examples/                # 示例项目
+│   ├── simple_app/
+│   ├── cli_tool/
+│   ├── cpp_demo/
+│   └── web_app/
+│
+├── tools/                   # 工具
+│   └── release_app/         # Release App工具
+│
+├── install_dependencies.sh  # Ubuntu依赖安装脚本（支持V1/V2）
+├── requirements.txt         # Python依赖列表（V2）
+├── test.py                 # V1自动化测试脚本
+├── test_v2_complete.py    # V2完整测试套件
+│
+└── 文档/
+    ├── README.md                   # 项目总览
+    ├── QUICKSTART.md               # V1快速开始（已删除）
+    ├── V2_QUICKSTART.md            # V2快速开始
+    ├── BINARY_MANAGER_V2.md        # V2详细文档
+    ├── REFACTORING_SUMMARY.md      # 重构总结
+    ├── TUTORIAL.md                 # 使用教程
+    └── ...
 ```
 
-## 文件说明
+## V2 架构层次
 
-### 核心模块
+### Domain层（领域层）
+**目录**: `binary_manager_v2/domain/`
 
-#### 发布器
+**特点**: 零外部依赖，纯Python标准库
 
-- **scanner.py** (150行)
-  - 递归扫描目录
-  - 计算文件SHA256哈希
-  - 支持忽略模式
-  - 生成文件清单
+| 文件 | 说明 | 行数 |
+|------|------|------|
+| `entities/package.py` | 包实体 | ~140 |
+| `entities/version.py` | 版本实体 | ~50 |
+| `entities/group.py` | 分组实体 | ~80 |
+| `entities/file_info.py` | 文件信息实体 | ~60 |
+| `value_objects/package_name.py` | 包名称值对象 | ~30 |
+| `value_objects/hash.py` | 哈希值对象 | ~40 |
+| `value_objects/git_info.py` | Git信息值对象 | ~95 |
+| `value_objects/storage_location.py` | 存储位置值对象 | ~50 |
+| `services/file_scanner.py` | 文件扫描服务 | ~95 |
+| `services/hash_calculator.py` | 哈希计算服务 | ~40 |
+| `services/packager.py` | 打包服务 | ~65 |
+| `repositories/package_repository.py` | 包仓储接口 | ~45 |
+| `repositories/group_repository.py` | 分组仓储接口 | ~55 |
+| `repositories/storage_repository.py` | 存储仓储接口 | ~40 |
 
-- **packager.py** (105行)
-  - 创建zip压缩包
-  - 计算zip包哈希
-  - 生成JSON配置
-  - 保存配置文件
+### Infrastructure层（基础设施层）
+**目录**: `binary_manager_v2/infrastructure/`
 
-- **main.py** (72行)
-  - 命令行接口
-  - 参数解析
-  - 错误处理
+| 文件 | 说明 | 行数 |
+|------|------|------|
+| `storage/local_storage.py` | 本地存储实现 | ~130 |
+| `storage/s3_storage.py` | S3存储实现（urllib3） | ~180 |
+| `git/git_service.py` | Git服务实现 | ~145 |
+| `database/sqlite_package_repository.py` | 包仓储实现 | ~210 |
+| `database/sqlite_group_repository.py` | 分组仓储实现 | ~190 |
 
-#### 下载器
+### Application层（应用层）
+**目录**: `binary_manager_v2/application/`
 
-- **downloader.py** (82行)
-  - HTTP下载功能
-  - 进度显示
-  - 重试机制
-  - 文件信息获取
+| 文件 | 说明 | 行数 |
+|------|------|------|
+| `publisher_service.py` | 发布服务 | ~190 |
+| `downloader_service.py` | 下载服务 | ~200 |
+| `group_service.py` | 分组服务 | ~180 |
 
-- **verifier.py** (125行)
-  - SHA256哈希验证
-  - zip解压
-  - JSON配置验证
-  - 文件完整性检查
+### Presentation层（表示层）
+**目录**: `binary_manager_v2/cli/`
 
-- **main.py** (159行)
-  - 命令行接口
-  - 下载流程控制
-  - 本地文件支持
-  - 错误处理
+| 文件 | 说明 | 行数 |
+|------|------|------|
+| `main.py` | CLI工具 | ~300 |
 
-### 配置文件
+### 共享层
+**目录**: `binary_manager_v2/shared/`
 
-- **schema.json** - JSON Schema验证规则
-- **config.json** - 示例数据配置
+| 文件 | 说明 | 行数 |
+|------|------|------|
+| `logger.py` | 日志工具 | ~60 |
+| `progress.py` | 进度条工具 | ~120 |
+| `config.py` | 配置管理 | ~50 |
 
-### 脚本文件
+## V1 模块
 
-- **install_dependencies.sh** - Ubuntu依赖安装
-  - 检查root权限
-  - 验证Python3
-  - 安装pip3
-  - 安装Python包
+### 发布器
+**目录**: `binary_manager/publisher/`
 
-- **test.py** - 自动化测试脚本
-  - 清理测试文件
-  - 测试发布器
-  - 测试下载器
-  - 验证完整性
+| 文件 | 说明 | 行数 |
+|------|------|------|
+| `scanner.py` | 文件扫描器 | ~150 |
+| `packager.py` | 打包器 | ~120 |
+| `main.py` | 发布器CLI | ~200 |
 
-### 文档文件
+### 下载器
+**目录**: `binary_manager/downloader/`
 
-- **README.md** - 完整项目文档
-- **QUICKSTART.md** - 快速开始指南
-- **PROJECT_FILES.md** - 本文件
+| 文件 | 说明 | 行数 |
+|------|------|------|
+| `downloader.py` | 下载器 | ~100 |
+| `verifier.py` | 校验器 | ~80 |
+| `main.py` | 下载器CLI | ~150 |
 
-### 依赖文件
+## 配置文件
 
-- **requirements.txt** - Python依赖包列表
-
-## 文件统计
-
-| 类型 | 数量 |
+| 文件 | 用途 |
 |------|------|
-| Python模块 | 10 |
-| 示例文件 | 4 |
-| 脚本文件 | 2 |
-| 配置文件 | 2 |
-| 文档文件 | 3 |
-| **总计** | **21** |
+| `binary_manager/config/schema.json` | JSON Schema验证规则 |
+| `binary_manager_v2/config/config.json` | V2主配置文件 |
+| `binary_manager_v2/config/database_schema.sql` | 数据库结构 |
 
-## 功能特性
+## 测试文件
 
-### 发布器功能
+| 文件 | 说明 | 覆盖范围 |
+|------|------|----------|
+| `test.py` | V1自动化测试 | 发布、下载、验证 |
+| `test_v2_complete.py` | V2完整测试套件 | 所有层次 |
+| `test_architecture.py` | 架构测试 | Domain层 |
 
-- ✓ 递归扫描文件目录
-- ✓ 计算SHA256哈希值
-- ✓ 支持忽略模式（.git, __pycache__等）
-- ✓ 创建zip压缩包
-- ✓ 生成JSON配置文件
-- ✓ 记录文件清单和元信息
-- ✓ 命令行接口
+## 依赖对比
 
-### 下载器功能
-
-- ✓ HTTP下载zip包
-- ✓ 支持本地文件
-- ✓ 进度条显示
-- ✓ SHA256哈希验证
-- ✓ zip解压
-- ✓ 文件完整性验证
-- ✓ 命令行接口
-
-### 安全特性
-
-- ✓ SHA256哈希校验
-- ✓ JSON Schema验证
-- ✓ 文件完整性检查
-- ✓ 错误处理和重试
-
-## 使用示例
-
-### 发布包
-```bash
-python3 binary_manager/publisher/main.py \
-  --source ./binary_manager/examples/my_app \
-  --output ./releases \
-  --version 1.0.0 \
-  --name my_app
+### V1 依赖
 ```
-
-### 下载包
-```bash
-python3 binary_manager/downloader/main.py \
-  --config ./releases/my_app_v1.0.0.json \
-  --output ./downloads
+requests>=2.31.0
+jsonschema>=4.20.0
+tqdm>=4.66.0
 ```
+**总大小**: ~105MB
 
-### 运行测试
-```bash
-python3 test.py
+### V2 依赖
 ```
+urllib3>=2.0.0
+requests>=2.31.0
+```
+**总大小**: ~6MB
 
-## 技术栈
+**减少**: 94%
 
-- **Python 3.6+**
-- **requests** - HTTP下载
-- **jsonschema** - JSON验证
-- **tqdm** - 进度显示
-- **内置库** - zipfile, hashlib, json, pathlib
+## 工具和脚本
 
-## 许可证
+| 文件 | 用途 |
+|------|------|
+| `install_dependencies.sh` | Ubuntu依赖安装（支持V1/V2） |
+| `tools/release_app/` | Release App交互式发布管理工具 |
 
-MIT License
+## 文档
+
+| 文件 | 说明 |
+|------|------|
+| `README.md` | 项目总览和快速开始 |
+| `QUICKSTART.md` | V1快速开始（已删除） |
+| `V2_QUICKSTART.md` | V2快速开始 |
+| `BINARY_MANAGER_V2.md` | V2详细文档 |
+| `REFACTORING_SUMMARY.md` | 重构总结 |
+| `REFACTORING_SUMMARY_CN.md` | 中文重构总结 |
+| `TUTORIAL.md` | 使用教程 |
+| `UPGRADE_DESIGN.md` | 升级设计文档 |
+| `RELEASE_APP_GUIDE.md` | Release App指南 |
+| `V2_TEST_REPORT.md` | V2测试报告 |
+
+## 代码统计
+
+### V2 代码量
+
+| 层次 | 文件数 | 代码行数（估算） |
+|------|--------|------------------|
+| Domain层 | 14 | ~900 |
+| Infrastructure层 | 5 | ~850 |
+| Application层 | 3 | ~570 |
+| Presentation层 | 1 | ~300 |
+| Shared层 | 3 | ~230 |
+| **总计** | **26** | **~2850** |
+
+### V1 代码量
+
+| 模块 | 文件数 | 代码行数（估算） |
+|------|--------|------------------|
+| Publisher | 3 | ~470 |
+| Downloader | 3 | ~330 |
+| **总计** | **6** | **~800** |
+
+## 特性对比
+
+| 特性 | V1 | V2 |
+|------|----|----|
+| 基本发布/下载 | ✅ | ✅ |
+| SHA256哈希验证 | ✅ | ✅ |
+| Git集成 | ❌ | ✅ |
+| SQLite数据库 | ❌ | ✅ |
+| 分组管理 | ❌ | ✅ |
+| S3存储 | ❌ | ✅（urllib3）|
+| 依赖大小 | ~105MB | ~6MB |
+| 架构 | 单体 | 洋葱架构 |
+
+## 使用建议
+
+### 选择V1如果：
+- 只需要基本的发布/下载功能
+- 不需要数据库存储
+- 不需要Git集成
+- 关注简单性
+
+### 选择V2如果：
+- 需要完整的包管理功能
+- 需要Git commit追踪
+- 需要管理多个包的依赖关系
+- 需要S3云存储
+- 关注依赖大小和性能
+- 需要可测试和可维护的架构
+
+---
+
+**更新日期**: 2026-02-26  
+**版本**: V2（洋葱架构）
