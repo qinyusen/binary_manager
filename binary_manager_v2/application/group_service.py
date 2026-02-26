@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Optional, Dict, List
 from ..domain.entities import Group, GroupPackage
+from ..domain.value_objects import PackageName
 from ..infrastructure.database import SQLiteGroupRepository, SQLitePackageRepository
 from ..shared.logger import Logger
 
@@ -40,6 +41,8 @@ class GroupService:
             
             group_packages.append(
                 GroupPackage(
+                    package_name=pkg_spec['package_name'],
+                    package_version=pkg_spec['version'],
                     package_id=package_id_from_package(package),
                     install_order=pkg_spec.get('install_order', 0),
                     required=pkg_spec.get('required', True)
@@ -47,13 +50,16 @@ class GroupService:
             )
         
         group = Group(
-            group_name=group_name,
+            group_name=PackageName(group_name),
             version=version,
-            packages=group_packages,
+            created_by=created_by or self.package_repository.publisher_id,
             description=description,
             environment_config=environment_config or {},
             metadata=metadata or {}
         )
+        
+        # 手动设置packages
+        group._packages = group_packages
         
         publisher_id = created_by or self.package_repository.publisher_id
         group_id = self.group_repository.save(group, publisher_id)
@@ -114,10 +120,10 @@ class GroupService:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         
-        export_file = output_path / f"{group.group_name}_v{group.version}.json"
+        export_file = output_path / f"{str(group.group_name)}_v{group.version}.json"
         
         export_data = {
-            'group_name': group.group_name,
+            'group_name': str(group.group_name),
             'version': group.version,
             'description': group.description,
             'environment_config': group.environment_config,
@@ -167,6 +173,8 @@ class GroupService:
                 continue
             
             packages.append({
+                'package_name': str(package.package_name),
+                'package_version': package.version,
                 'package_id': package_id_from_package(package),
                 'install_order': pkg_data.get('install_order', 0),
                 'required': pkg_data.get('required', True)
@@ -174,6 +182,8 @@ class GroupService:
         
         group_packages = [
             GroupPackage(
+                package_name=p['package_name'],
+                package_version=p['package_version'],
                 package_id=p['package_id'],
                 install_order=p['install_order'],
                 required=p['required']
@@ -182,13 +192,16 @@ class GroupService:
         ]
         
         group = Group(
-            group_name=data['group_name'],
+            group_name=PackageName(data['group_name']),
             version=data['version'],
-            packages=group_packages,
+            created_by=self.package_repository.publisher_id,
             description=data.get('description'),
             environment_config=data.get('environment_config', {}),
             metadata=data.get('metadata', {})
         )
+        
+        # 手动设置packages
+        group._packages = group_packages
         
         group_id = self.group_repository.save(group, self.package_repository.publisher_id)
         self.logger.info(f"Group imported with ID: {group_id}")

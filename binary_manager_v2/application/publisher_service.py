@@ -48,20 +48,19 @@ class PublisherService:
                 git_info = git_service.get_git_info()
                 self.logger.info(f"Git commit: {git_info.commit_short if git_info else 'N/A'}")
         
-        file_scanner = FileScanner()
-        files = file_scanner.scan_directory(str(source_path), ignore_patterns)
+        file_scanner = FileScanner(ignore_patterns)
+        files, scan_info = file_scanner.scan_directory(str(source_path))
         self.logger.info(f"Scanned {len(files)} files")
         
         hash_calculator = HashCalculator()
-        packager = Packager()
+        packager = Packager(str(self.storage.base_path))
         
         archive_name = f"{package_name}_v{version}.zip"
-        archive_path = self.storage.base_path / archive_name
+        result = packager.create_zip(str(source_path), files, package_name, version)
+        archive_path = result['archive_path']
         
-        packager.create_zip(str(source_path), files, str(archive_path))
-        
-        archive_hash = hash_calculator.calculate_file_hash(str(archive_path))
-        archive_size = archive_path.stat().st_size
+        archive_hash = hash_calculator.calculate_file(str(archive_path))
+        archive_size = result['size']
         
         package = Package(
             package_name=PackageName(package_name),
@@ -115,20 +114,20 @@ class PublisherService:
             if git_service.is_git_repo():
                 git_info = git_service.get_git_info()
         
-        file_scanner = FileScanner()
-        files = file_scanner.scan_directory(str(source_path), ignore_patterns)
+        file_scanner = FileScanner(ignore_patterns)
+        files, scan_info = file_scanner.scan_directory(str(source_path))
         
         hash_calculator = HashCalculator()
-        packager = Packager()
         
         temp_dir = Path('/tmp')
+        packager = Packager(str(temp_dir))
+        
         archive_name = f"{package_name}_v{version}.zip"
-        temp_archive_path = temp_dir / archive_name
+        result = packager.create_zip(str(source_path), files, package_name, version)
+        temp_archive_path = result['archive_path']
         
-        packager.create_zip(str(source_path), files, str(temp_archive_path))
-        
-        archive_hash = hash_calculator.calculate_file_hash(str(temp_archive_path))
-        archive_size = temp_archive_path.stat().st_size
+        archive_hash = hash_calculator.calculate_file(str(temp_archive_path))
+        archive_size = result['size']
         
         s3_key = f"packages/{package_name}/{version}/{archive_name}"
         s3_storage.upload_file(str(temp_archive_path), s3_key)

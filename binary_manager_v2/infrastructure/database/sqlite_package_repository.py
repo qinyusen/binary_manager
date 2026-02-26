@@ -23,8 +23,9 @@ class SQLitePackageRepository(PackageRepository):
         self.conn = sqlite3.connect(str(self.db_path))
         self.conn.row_factory = sqlite3.Row
         
-        self.publisher_id = self._get_or_create_publisher_id()
         self.logger = Logger.get(self.__class__.__name__)
+        self._initialize_database()
+        self.publisher_id = self._get_or_create_publisher_id()
         
         self.logger.info(f"Database initialized: {self.db_path}")
         self.logger.info(f"Publisher ID: {self.publisher_id}")
@@ -79,10 +80,10 @@ class SQLitePackageRepository(PackageRepository):
                     package_name, version, created_at, updated_at,
                     publisher_id, publisher_hostname,
                     git_commit_hash, git_commit_short, git_branch, git_tag,
-                    git_author, git_author_email, git_commit_time, git_is_dirty,
+                    git_author, git_author_email, git_commit_time, git_commit_message, git_remotes, git_is_dirty,
                     archive_name, archive_size, archive_hash, file_count,
                     storage_type, storage_path, description, metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 str(package.package_name),
                 package.version,
@@ -96,6 +97,8 @@ class SQLitePackageRepository(PackageRepository):
                 git_info.author if git_info else None,
                 git_info.author_email if git_info else None,
                 git_info.commit_time if git_info else None,
+                git_info.commit_message if git_info else None,
+                json.dumps(git_info.remotes) if git_info and git_info.remotes else None,
                 1 if git_info and git_info.is_dirty else 0,
                 f"{package.package_name}_v{package.version}.zip",
                 package.archive_size,
@@ -221,6 +224,17 @@ class SQLitePackageRepository(PackageRepository):
         
         git_info = None
         if row['git_commit_hash']:
+            # 转换为dict以便使用.get()方法
+            row_dict = dict(row)
+            
+            # 处理git_remotes - 可能是None
+            remotes = []
+            if row_dict.get('git_remotes'):
+                try:
+                    remotes = json.loads(row_dict['git_remotes'])
+                except (json.JSONDecodeError, TypeError):
+                    remotes = []
+            
             git_info = GitInfo(
                 commit_hash=row['git_commit_hash'],
                 commit_short=row['git_commit_short'],
@@ -229,6 +243,8 @@ class SQLitePackageRepository(PackageRepository):
                 author=row['git_author'],
                 author_email=row['git_author_email'],
                 commit_time=row['git_commit_time'],
+                commit_message=row_dict.get('git_commit_message'),
+                remotes=remotes,
                 is_dirty=bool(row['git_is_dirty'])
             )
         
@@ -241,6 +257,7 @@ class SQLitePackageRepository(PackageRepository):
             )
         
         return Package(
+            id=row['id'],
             package_name=PackageName(row['package_name']),
             version=row['version'],
             archive_hash=Hash.from_string(row['archive_hash']),
@@ -262,3 +279,119 @@ class SQLitePackageRepository(PackageRepository):
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+    
+    def _initialize_database(self):
+        """初始化数据库表"""
+        cursor = self.conn.cursor()
+        
+        # 创建publishers表
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS publishers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                publisher_id TEXT NOT NULL UNIQUE,
+                hostname TEXT NOT NULL,
+                first_seen_at TEXT NOT NULL,
+                last_active_at TEXT,
+                metadata TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+        ''')
+        
+        # 创建packages表
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS packages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                package_name TEXT NOT NULL,
+                version TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                publisher_id TEXT NOT NULL,
+                publisher_hostname TEXT NOT NULL,
+                git_commit_hash TEXT NOT NULL,
+                git_commit_short TEXT NOT NULL,
+                git_branch TEXT,
+                git_tag TEXT,
+                git_author TEXT,
+                git_author_email TEXT,
+                git_commit_time TEXT,
+                git_commit_message TEXT,
+                git_remotes TEXT,
+                git_is_dirty INTEGER DEFAULT 0,
+                archive_name TEXT NOT NULL,
+                archive_size INTEGER NOT NULL,
+                archive_hash TEXT NOT NULL,
+                file_count INTEGER NOT NULL,
+                storage_type TEXT NOT NULL DEFAULT 'local',
+                storage_path TEXT NOT NULL,
+                s3_bucket TEXT,
+                s3_key TEXT,
+                description TEXT,
+                metadata TEXT,
+                UNIQUE(package_name, version, git_commit_hash)
+            )
+        ''')
+        
+        # 添加新列（如果表已存在且没有这些列）
+        try:
+            cursor.execute('ALTER TABLE packages ADD COLUMN git_commit_message TEXT')
+        except sqlite3.OperationalError:
+            pass  # 列已存在
+        
+        try:
+            cursor.execute('ALTER TABLE packages ADD COLUMN git_remotes TEXT')
+        except sqlite3.OperationalError:
+            pass  # 列已存在
+        
+        # 创建groups表
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS groups (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_name TEXT NOT NULL,
+                version TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                description TEXT,
+                environment_config TEXT,
+                metadata TEXT,
+                UNIQUE(group_name, version)
+            )
+        ''')
+        
+        # 创建group_packages表
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS group_packages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id INTEGER NOT NULL,
+                package_id INTEGER NOT NULL,
+                package_name TEXT NOT NULL,
+                package_version TEXT NOT NULL,
+                install_order INTEGER DEFAULT 0,
+                required INTEGER DEFAULT 1,
+                FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+                FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE CASCADE,
+                UNIQUE(group_id, package_id)
+            )
+        ''')
+        
+        # 添加新列到group_packages（如果表已存在且没有这些列）
+        try:
+            cursor.execute('ALTER TABLE group_packages ADD COLUMN package_name TEXT')
+        except sqlite3.OperationalError:
+            pass
+        
+        try:
+            cursor.execute('ALTER TABLE group_packages ADD COLUMN package_version TEXT')
+        except sqlite3.OperationalError:
+            pass
+        
+        # 创建索引
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_packages_name_version ON packages(package_name, version)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_packages_git_commit ON packages(git_commit_hash)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_packages_publisher ON packages(publisher_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_groups_name_version ON groups(group_name, version)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_group_packages_group ON group_packages(group_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_group_packages_package ON group_packages(package_id)')
+        
+        self.conn.commit()

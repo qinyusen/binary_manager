@@ -18,8 +18,10 @@ class Package:
         storage_location: Optional[StorageLocation] = None,
         publisher_id: Optional[str] = None,
         description: Optional[str] = None,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
+        id: Optional[int] = None
     ):
+        self._id = id
         self._package_name = package_name
         self._version = version
         self._archive_hash = archive_hash
@@ -32,6 +34,14 @@ class Package:
         self._metadata = metadata or {}
         self._created_at = datetime.utcnow()
         self._files: List['FileInfo'] = []
+    
+    @property
+    def id(self) -> Optional[int]:
+        return self._id
+    
+    @id.setter
+    def id(self, value: int) -> None:
+        self._id = value
     
     @property
     def package_name(self) -> PackageName:

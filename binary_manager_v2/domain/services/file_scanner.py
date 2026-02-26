@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Tuple, Optional, Set
 from ..entities import FileInfo
 from ..value_objects import Hash
+from .hash_calculator import HashCalculator
 
 
 class FileScanner:

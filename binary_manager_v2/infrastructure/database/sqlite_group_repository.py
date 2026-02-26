@@ -37,7 +37,7 @@ class SQLiteGroupRepository(GroupRepository):
                     created_by, description, environment_config, metadata
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                group.group_name,
+                str(group.group_name),
                 group.version,
                 now, now,
                 created_by,
@@ -50,11 +50,13 @@ class SQLiteGroupRepository(GroupRepository):
             
             for pkg in group.packages:
                 cursor.execute('''
-                    INSERT INTO group_packages (group_id, package_id, install_order, required)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO group_packages (group_id, package_id, package_name, package_version, install_order, required)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 ''', (
                     group_id,
                     pkg.package_id,
+                    pkg.package_name,
+                    pkg.package_version,
                     pkg.install_order,
                     1 if pkg.required else 0
                 ))
@@ -180,16 +182,19 @@ class SQLiteGroupRepository(GroupRepository):
     def _row_to_group(self, row: sqlite3.Row) -> Group:
         """将数据库行转换为Group实体"""
         from ...domain.entities import GroupPackage
+        from ...domain.value_objects import PackageName
         
         cursor = self.conn.cursor()
         cursor.execute(
-            'SELECT package_id, install_order, required FROM group_packages WHERE group_id = ? ORDER BY install_order',
+            'SELECT package_id, package_name, package_version, install_order, required FROM group_packages WHERE group_id = ? ORDER BY install_order',
             (row['id'],)
         )
         package_rows = cursor.fetchall()
         
         packages = [
             GroupPackage(
+                package_name=r['package_name'],
+                package_version=r['package_version'],
                 package_id=r['package_id'],
                 install_order=r['install_order'],
                 required=bool(r['required'])
@@ -197,14 +202,19 @@ class SQLiteGroupRepository(GroupRepository):
             for r in package_rows
         ]
         
-        return Group(
-            group_name=row['group_name'],
+        group = Group(
+            group_name=PackageName(row['group_name']),
             version=row['version'],
-            packages=packages,
+            created_by=row['created_by'],
             description=row['description'],
             environment_config=json.loads(row['environment_config']) if row['environment_config'] else {},
             metadata=json.loads(row['metadata']) if row['metadata'] else {}
         )
+        
+        # 手动添加packages
+        group._packages = packages
+        
+        return group
     
     def close(self):
         """关闭数据库连接"""
