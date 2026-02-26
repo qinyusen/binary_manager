@@ -1,0 +1,11 @@
+{
+  "app_name": "Simple Calculator",
+  "version": "1.0.0",
+  "description": "一个简单的计算器应用",
+  "precision": 2,
+  "author": "Binary Manager Team",
+  "license": "MIT",
+  "dependencies": {
+    "python": ">=3.7"
+  }
+}

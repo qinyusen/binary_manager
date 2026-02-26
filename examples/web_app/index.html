@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web App - Binary Manager 示例</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .info-box p {
+            margin: 5px 0;
+            font-size: 0.95em;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+        }
+        
+        .status {
+            margin-top: 30px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 5px;
+            color: #2e7d32;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Web App</h1>
+        <p class="subtitle">Binary Manager V2 示例应用</p>
+        
+        <div class="info-box">
+            <h3>关于此应用</h3>
+            <p>这是一个简单的Web服务器示例，用于演示Binary Manager的发布和下载功能。</p>
+            <p><strong>版本:</strong> 1.0.0</p>
+            <p><strong>作者:</strong> Binary Manager Team</p>
+        </div>
+        
+        <div class="info-box">
+            <h3>API端点</h3>
+            <p>• <code>GET /api/health</code> - 健康检查</p>
+            <p>• <code>GET /api/info</code> - 服务器信息</p>
+        </div>
+        
+        <div class="info-box">
+            <h3>使用Binary Manager</h3>
+            <p><strong>发布应用:</strong></p>
+            <pre style="background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto;">
+python3 -m binary_manager_v2.cli.main publish \
+    --source ./web_app \
+    --package-name web_app \
+    --version 1.0.0</pre>
+            
+            <p style="margin-top: 15px;"><strong>下载应用:</strong></p>
+            <pre style="background: #f4f4f4; padding: 10px; border-radius: 4px; overflow-x: auto;">
+python3 -m binary_manager_v2.cli.main download \
+    --package-name web_app \
+    --version 1.0.0 \
+    --output ./installed_apps</pre>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/api/health" class="btn">检查健康状态</a>
+            <a href="/api/info" class="btn">查看API信息</a>
+        </div>
+        
+        <div class="status">
+            ✅ 服务器运行正常
+        </div>
+    </div>
+    
+    <script>
+        // 简单的状态检查
+        fetch('/api/health')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Health check:', data);
+            })
+            .catch(error => {
+                console.error('Health check failed:', error);
+            });
+    </script>
+</body>
+</html>
