@@ -26,18 +26,19 @@ class BinaryManagerCLI:
             self.parser.print_help()
             return 1
         
+        commands = {
+            'publish': self.cmd_publish,
+            'download': self.cmd_download,
+            'group': self.cmd_group,
+            'list': self.cmd_list
+        }
+        
         try:
-            if args.command == 'publish':
-                return self.cmd_publish(args)
-            elif args.command == 'download':
-                return self.cmd_download(args)
-            elif args.command == 'group':
-                return self.cmd_group(args)
-            elif args.command == 'list':
-                return self.cmd_list(args)
-            else:
-                self.parser.print_help()
-                return 1
+            handler = commands.get(args.command)
+            if handler:
+                return handler(args)
+            self.parser.print_help()
+            return 1
         except Exception as e:
             self.logger.error(f"Command failed: {e}")
             return 1
@@ -112,19 +113,20 @@ class BinaryManagerCLI:
         """分组管理"""
         group_service = GroupService()
         
-        if args.group_action == 'create':
-            return self._group_create(group_service, args)
-        elif args.group_action == 'list':
-            return self._group_list(group_service, args)
-        elif args.group_action == 'export':
-            return self._group_export(group_service, args)
-        elif args.group_action == 'import':
-            return self._group_import(group_service, args)
-        elif args.group_action == 'delete':
-            return self._group_delete(group_service, args)
-        else:
-            self.logger.error("No group action specified")
-            return 1
+        actions = {
+            'create': self._group_create,
+            'list': self._group_list,
+            'export': self._group_export,
+            'import': self._group_import,
+            'delete': self._group_delete
+        }
+        
+        handler = actions.get(args.group_action)
+        if handler:
+            return handler(group_service, args)
+        
+        self.logger.error("No group action specified")
+        return 1
     
     def _group_create(self, service, args) -> int:
         """创建分组"""

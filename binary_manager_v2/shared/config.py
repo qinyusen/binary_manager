@@ -83,6 +83,16 @@ class Config:
         with open(config_file, 'w') as f:
             json.dump(self._config, f, indent=2)
     
+    def __getattr__(self, name: str) -> Any:
+        if name.startswith('s3_'):
+            key = f's3.{name[3:]}'
+            defaults = {
+                's3_enabled': False,
+                's3_region': 'us-east-1'
+            }
+            return self.get(key, defaults.get(name, ''))
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+    
     @property
     def database_path(self) -> str:
         return self.get('database.path', './database/binary_manager.db')
@@ -90,23 +100,3 @@ class Config:
     @property
     def storage_type(self) -> str:
         return self.get('storage.type', 'local')
-    
-    @property
-    def s3_enabled(self) -> bool:
-        return self.get('s3.enabled', False)
-    
-    @property
-    def s3_bucket(self) -> str:
-        return self.get('s3.bucket', '')
-    
-    @property
-    def s3_region(self) -> str:
-        return self.get('s3.region', 'us-east-1')
-    
-    @property
-    def s3_access_key(self) -> str:
-        return self.get('s3.access_key', '')
-    
-    @property
-    def s3_secret_key(self) -> str:
-        return self.get('s3.secret_key', '')
