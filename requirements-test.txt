@@ -1,0 +1,21 @@
+# Release Portal V3 测试依赖
+
+# 测试框架
+pytest==7.4.0
+pytest-cov==4.1.0
+pytest-flask==1.2.0
+pytest-xdist==3.3.1  # 并行测试
+pytest-timeout==2.1.0  # 测试超时
+
+# 覆盖率
+coverage==7.3.0
+
+# 代码质量
+pylint==3.0.1
+flake8==6.1.0
+black==23.7.0
+
+# 其他工具
+faker==19.6.2  # 生成测试数据
+freezegun==1.2.2  # 时间模拟
+responses==0.23.1  # HTTP 模拟

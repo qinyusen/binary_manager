@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发布管理 - 地瓜机器人发布平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 15px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        .main-content {
+            padding: 30px;
+        }
+        .page-header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .release-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-draft {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .status-published {
+            background-color: #198754;
+            color: #fff;
+        }
+        .status-archived {
+            background-color: #6c757d;
+            color: #fff;
+        }
+        .type-badge {
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .type-bsp { background-color: #0d6efd; color: #fff; }
+        .type-driver { background-color: #dc3545; color: #fff; }
+        .type-examples { background-color: #fd7e14; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar p-0">
+                <div class="p-4">
+                    <h5>🤖 发布平台</h5>
+                    <p class="small mb-4">Release Portal V3</p>
+                    
+                    <nav class="nav flex-column">
+                        <a class="nav-link" href="/dashboard">
+                            <i class="bi bi-speedometer2 me-2"></i>仪表板
+                        </a>
+                        <a class="nav-link active" href="/releases">
+                            <i class="bi bi-box-seam me-2"></i>发布管理
+                        </a>
+                        <a class="nav-link" href="/downloads">
+                            <i class="bi bi-download me-2"></i>下载中心
+                        </a>
+                        <a class="nav-link" href="/licenses">
+                            <i class="bi bi-key me-2"></i>许可证管理
+                        </a>
+                        <hr class="my-3" style="border-color: rgba(255,255,255,0.2);">
+                        <a class="nav-link" href="#" onclick="logout()">
+                            <i class="bi bi-box-arrow-right me-2"></i>登出
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            
+            <div class="col-md-10 main-content">
+                <div class="page-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2>发布管理</h2>
+                        <p class="text-muted mb-0">管理 BSP、驱动和示例程序的发布</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createReleaseModal">
+                            <i class="bi bi-plus-circle me-2"></i>创建发布
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm ms-2" onclick="loadReleases()">
+                            <i class="bi bi-arrow-clockwise"></i> 刷新
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <select class="form-select" id="filterType" onchange="loadReleases()">
+                            <option value="">所有类型</option>
+                            <option value="BSP">BSP</option>
+                            <option value="DRIVER">驱动</option>
+                            <option value="EXAMPLES">示例</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="filterStatus" onchange="loadReleases()">
+                            <option value="">所有状态</option>
+                            <option value="DRAFT">草稿</option>
+                            <option value="PUBLISHED">已发布</option>
+                            <option value="ARCHIVED">已归档</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="releasesList">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="createReleaseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">创建新发布</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createReleaseForm">
+                        <div class="mb-3">
+                            <label class="form-label">资源类型</label>
+                            <select class="form-select" id="resourceType" required>
+                                <option value="">请选择...</option>
+                                <option value="BSP">BSP (板级支持包)</option>
+                                <option value="DRIVER">驱动</option>
+                                <option value="EXAMPLES">示例程序</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">版本</label>
+                            <input type="text" class="form-control" id="version" placeholder="1.0.0" required>
+                            <small class="text-muted">使用语义化版本号，如 1.0.0</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">描述</label>
+                            <textarea class="form-control" id="description" rows="3" placeholder="发布描述..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">更新日志</label>
+                            <textarea class="form-control" id="changelog" rows="3" placeholder="更新内容..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">上传包文件</label>
+                            <input type="file" class="form-control" id="packageFile" accept=".tar.gz,.zip,.tar">
+                            <small class="text-muted">支持 .tar.gz, .tar, .zip 格式</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="createRelease()">创建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        function getAuthHeaders() {
+            const token = sessionStorage.getItem('token');
+            return {
+                'Authorization': `Bearer ${token}`
+            };
+        }
+        
+        function getJsonHeaders() {
+            const token = sessionStorage.getItem('token');
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+        
+        async function loadReleases() {
+            const container = document.getElementById('releasesList');
+            const filterType = document.getElementById('filterType').value;
+            const filterStatus = document.getElementById('filterStatus').value;
+            
+            try {
+                let url = `${API_BASE}/releases`;
+                const params = [];
+                if (filterType) params.push(`type=${filterType}`);
+                if (filterStatus) params.push(`status=${filterStatus}`);
+                if (params.length) url += '?' + params.join('&');
+                
+                const response = await fetch(url, { headers: getAuthHeaders() });
+                const data = await response.json();
+                
+                if (data.releases && data.releases.length > 0) {
+                    container.innerHTML = data.releases.map(release => `
+                        <div class="release-card">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <h5 class="mb-0 me-2">${release.resource_type} - ${release.version}</h5>
+                                        <span class="type-badge type-${release.resource_type.toLowerCase()}">${release.resource_type}</span>
+                                        <span class="status-badge status-${release.status.toLowerCase()}">${release.status}</span>
+                                    </div>
+                                    <p class="text-muted mb-2">${release.description || '暂无描述'}</p>
+                                    <small class="text-muted">
+                                        <i class="bi bi-person me-1"></i>${release.publisher_id}
+                                        <span class="mx-2">|</span>
+                                        <i class="bi bi-calendar me-1"></i>${new Date(release.created_at).toLocaleDateString('zh-CN')}
+                                    </small>
+                                </div>
+                                <div class="btn-group">
+                                    ${release.status === 'DRAFT' ? `
+                                        <button class="btn btn-sm btn-success" onclick="publishRelease('${release.release_id}')">
+                                            <i class="bi bi-check-circle"></i> 发布
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="archiveRelease('${release.release_id}')">
+                                            <i class="bi bi-archive"></i> 归档
+                                        </button>
+                                    ` : ''}
+                                    ${release.status === 'PUBLISHED' ? `
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="archiveRelease('${release.release_id}')">
+                                            <i class="bi bi-archive"></i> 归档
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox display-4 text-muted"></i>
+                            <p class="text-muted mt-3">暂无发布记录</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading releases:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        加载失败: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        async function createRelease() {
+            const resourceType = document.getElementById('resourceType').value;
+            const version = document.getElementById('version').value;
+            const description = document.getElementById('description').value;
+            const changelog = document.getElementById('changelog').value;
+            const packageFile = document.getElementById('packageFile').files[0];
+            
+            if (!resourceType || !version) {
+                alert('请填写必填字段');
+                return;
+            }
+            
+            try {
+                const formData = new FormData();
+                formData.append('resource_type', resourceType);
+                formData.append('version', version);
+                formData.append('description', description);
+                formData.append('changelog', changelog);
+                if (packageFile) {
+                    formData.append('package_file', packageFile);
+                }
+                
+                const response = await fetch(`${API_BASE}/releases`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    alert('发布创建成功');
+                    bootstrap.Modal.getInstance(document.getElementById('createReleaseModal')).hide();
+                    document.getElementById('createReleaseForm').reset();
+                    loadReleases();
+                } else {
+                    const data = await response.json();
+                    alert('创建失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error creating release:', error);
+                alert('创建失败: ' + error.message);
+            }
+        }
+        
+        async function publishRelease(releaseId) {
+            if (!confirm('确定要发布此版本吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/releases/${releaseId}/publish`, {
+                    method: 'POST',
+                    headers: getJsonHeaders()
+                });
+                
+                if (response.ok) {
+                    alert('发布成功');
+                    loadReleases();
+                } else {
+                    const data = await response.json();
+                    alert('发布失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error publishing release:', error);
+                alert('发布失败: ' + error.message);
+            }
+        }
+        
+        async function archiveRelease(releaseId) {
+            if (!confirm('确定要归档此版本吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/releases/${releaseId}/archive`, {
+                    method: 'POST',
+                    headers: getJsonHeaders()
+                });
+                
+                if (response.ok) {
+                    alert('归档成功');
+                    loadReleases();
+                } else {
+                    const data = await response.json();
+                    alert('归档失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error archiving release:', error);
+                alert('归档失败: ' + error.message);
+            }
+        }
+        
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '/login';
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadReleases();
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

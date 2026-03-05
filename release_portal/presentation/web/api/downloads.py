@@ -28,7 +28,7 @@ def get_available_packages(release_id: str):
         }
     """
     try:
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         
         container = create_container()
         
@@ -71,7 +71,7 @@ def download_package(release_id: str, content_type: str):
     Response: Binary file stream
     """
     try:
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         
         container = create_container()
         
@@ -140,7 +140,7 @@ def list_downloadable_releases():
         }
     """
     try:
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         
         container = create_container()
         
@@ -190,7 +190,7 @@ def get_user_license():
         }
     """
     try:
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         
         container = create_container()
         

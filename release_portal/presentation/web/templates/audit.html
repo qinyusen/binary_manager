@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>审计日志 - 地瓜机器人发布平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 15px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        .main-content {
+            padding: 30px;
+        }
+        .page-header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .log-entry {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #6c757d;
+        }
+        .log-entry.success {
+            border-left-color: #198754;
+        }
+        .log-entry.failed {
+            border-left-color: #dc3545;
+        }
+        .action-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .action-login { background-color: #0d6efd; color: white; }
+        .action-logout { background-color: #6c757d; color: white; }
+        .action-release_create { background-color: #198754; color: white; }
+        .action-release_publish { background-color: #0dcaf0; color: white; }
+        .action-download { background-color: #0dcaf0; color: white; }
+        .action-license_create { background-color: #fd7e14; color: white; }
+        .action-backup_create { background-color: #6610f2; color: white; }
+        .action-delete { background-color: #dc3545; color: white; }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .status-success { background-color: #198754; color: white; }
+        .status-failed { background-color: #dc3545; color: white; }
+        
+        .log-details {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar p-0">
+                <div class="p-4">
+                    <h5>🤖 发布平台</h5>
+                    <p class="small mb-4">Release Portal V3</p>
+                    
+                    <nav class="nav flex-column">
+                        <a class="nav-link" href="/dashboard">
+                            <i class="bi bi-speedometer2 me-2"></i>仪表板
+                        </a>
+                        <a class="nav-link" href="/releases">
+                            <i class="bi bi-box-seam me-2"></i>发布管理
+                        </a>
+                        <a class="nav-link" href="/downloads">
+                            <i class="bi bi-download me-2"></i>下载中心
+                        </a>
+                        <a class="nav-link" href="/licenses">
+                            <i class="bi bi-key me-2"></i>许可证管理
+                        </a>
+                        <a class="nav-link" href="/backup">
+                            <i class="bi bi-database-add me-2"></i>数据备份
+                        </a>
+                        <a class="nav-link active" href="/audit">
+                            <i class="bi bi-journal-text me-2"></i>审计日志
+                        </a>
+                        <hr class="my-3" style="border-color: rgba(255,255,255,0.2);">
+                        <a class="nav-link" href="#" onclick="logout()">
+                            <i class="bi bi-box-arrow-right me-2"></i>登出
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            
+            <div class="col-md-10 main-content">
+                <div class="page-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2>审计日志</h2>
+                        <p class="text-muted mb-0">系统操作审计跟踪</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-primary btn-sm" onclick="exportLogs()">
+                            <i class="bi bi-download me-1"></i> 导出
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm ms-2" onclick="loadLogs()">
+                            <i class="bi bi-arrow-clockwise"></i> 刷新
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 筛选区域 -->
+                <div class="filter-section">
+                    <h5 class="mb-3">筛选条件</h5>
+                    <form id="filterForm">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">用户名</label>
+                                <input type="text" class="form-control form-control-sm" id="filterUsername" placeholder="搜索用户名...">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">操作类型</label>
+                                <select class="form-select form-select-sm" id="filterAction">
+                                    <option value="">所有操作</option>
+                                    <option value="LOGIN">登录</option>
+                                    <option value="LOGOUT">登出</option>
+                                    <option value="RELEASE_CREATE">创建发布</option>
+                                    <option value="RELEASE_PUBLISH">发布版本</option>
+                                    <option value="DOWNLOAD">下载</option>
+                                    <option value="LICENSE_CREATE">创建许可证</option>
+                                    <option value="BACKUP_CREATE">创建备份</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">状态</label>
+                                <select class="form-select form-select-sm" id="filterStatus">
+                                    <option value="">所有状态</option>
+                                    <option value="SUCCESS">成功</option>
+                                    <option value="FAILED">失败</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">日期范围</label>
+                                <input type="date" class="form-control form-control-sm" id="filterStartDate">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <label class="form-label">结束日期</label>
+                                <input type="date" class="form-control form-control-sm" id="filterEndDate">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">每页显示</label>
+                                <select class="form-select form-select-sm" id="pageSize">
+                                    <option value="50">50 条</option>
+                                    <option value="100" selected>100 条</option>
+                                    <option value="200">200 条</option>
+                                    <option value="500">500 条</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label"></label>
+                                <button class="btn btn-primary btn-sm w-100" onclick="applyFilters()">
+                                    <i class="bi bi-funnel me-1"></i>应用筛选
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label"></label>
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="resetFilters()">
+                                    <i class="bi bi-arrow-counterclockwise"></i> 重置
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 统计卡片 -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="bi bi-journal-text display-4 text-primary"></i>
+                                <h5 class="mt-3">总记录数</h5>
+                                <p id="totalLogs" class="mb-0">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="bi bi-person-check display-4 text-success"></i>
+                                <h5 class="mt-3">今日操作</h5>
+                                <p id="todayActions" class="mb-0">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 smoke">
+                            <div class="card-body text-center">
+                                <i class="bi bi-graph-up-arrow display-4 text-info"></i>
+                                <h5 class="mt-3">本周操作</h5>
+                                <p id="weekActions" class="mb-0">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="bi bi-calendar-check display-4 text-warning"></i>
+                                <h5 class="mt-3">操作统计</h5>
+                                <p id="actionStats" class="mb-0">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 日志列表 -->
+                <div id="logsList">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 分页 -->
+                <div id="pagination" class="d-flex justify-content-center mt-4" style="display: none;">
+                    <nav>
+                        <ul class="pagination">
+                            <li class="page-item">
+                                <a class="page-link" href="#" onclick="changePage('previous')">上一页</a>
+                            </li>
+                            <li class="page-item active">
+                                <a class="page-link" href="#">1</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="#" onclick="changePage('next')">下一页</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导出模态框 -->
+    <div class="modal fade" id="exportModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">导出审计日志</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="exportForm">
+                        <div class="mb-3">
+                            <label class="form-label">导出格式</label>
+                            <select class="form-select" id="exportFormat">
+                                <option value="csv">CSV</option>
+                                <option value="json">JSON</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="useCurrentFilters" checked>
+                                <label class="form-check-label" for="useCurrentFilters">
+                                    使用当前筛选条件
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="performExport()">
+                        <i class="bi bi-download me-1"></i> 导出
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日志详情模态框 -->
+    <div class="modal fade" id="logDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">审计日志详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="logDetailContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        let currentPage = 1;
+        let pageSize = 100;
+        let totalPages = 1;
+        
+        function getAuthHeaders() {
+            const token = sessionStorage.getItem('token');
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+        
+        async function loadLogs() {
+            const container = document.getElementById('logsList');
+            
+            try {
+                // 构建查询参数
+                const params = new URLSearchParams();
+                
+                const username = document.getElementById('filterUsername').value;
+                const action = document.getElementById('filterAction').value;
+                const status = document.getElementById('filterStatus').value;
+                const startDate = document.getElementById('filterStartDate').value;
+                const endDate = document.getElementById('filterEndDate').value;
+                
+                if (username) params.append('username', username);
+                if (action) params.append('action', action);
+                if (status) params.append('status', status);
+                if (startDate) params.append('start_date', startDate);
+                if (endDate) params.append('end_date', endDate);
+                params.append('limit', pageSize);
+                params.append('offset', (currentPage - 1) * pageSize);
+                
+                const response = await fetch(`${API_BASE}/audit/logs?${params}`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                if (data.logs) {
+                    displayLogs(data.logs);
+                    
+                    // 更新分页
+                    totalPages = Math.ceil(data.total / pageSize);
+                    updatePagination();
+                    
+                    // 更新统计
+                    updateStatistics();
+                }
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        加载失败: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function displayLogs(logs) {
+            const container = document.getElementById('logsList');
+            
+            if (logs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox display-4 text-muted"></i>
+                        <p class="text-muted mt-3">暂无审计日志</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = logs.map(log => {
+                const statusClass = log.status === 'SUCCESS' ? 'success' : 'failed';
+                const statusBadge = `status-${statusClass}`;
+                const actionClass = `action-${log.action.toLowerCase().replace('_', '-')}`;
+                
+                return `
+                    <div class="log-entry ${statusClass}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="action-badge ${actionClass}">${formatAction(log.action)}</span>
+                                    <span class="status-badge ${statusBadge} ms-2">${formatStatus(log.status)}</span>
+                                    <span class="text-muted ms-2">${formatTime(log.timestamp)}</span>
+                                </div>
+                                <div class="mb-1">
+                                    <strong>${log.username}</strong>
+                                    <span class="text-muted ms-2">(${log.role})</span>
+                                    ${log.ip_address ? `<span class="text-muted ms-2">• ${log.ip_address}</span>` : ''}
+                                </div>
+                                ${log.resource_name ? `<div class="text-muted">资源: ${log.resource_name}</div>` : ''}
+                                ${log.error_message ? `<div class="text-danger">错误: ${log.error_message}</div>` : ''}
+                            </div>
+                            <div class="btn-group btn-sm">
+                                <button class="btn btn-outline-secondary" onclick="showLogDetail(${log.id})">
+                                    <i class="bi bi-eye"></i> 详情
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        async function updateStatistics() {
+            try {
+                // 获取今日统计
+                const today = new Date();
+                const weekAgo = new Date(today);
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                
+                const response = await fetch(`${API_BASE}/audit/logs/statistics`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                document.getElementById('totalLogs').textContent = data.action_statistics ?
+                    Object.values(data.action_statistics).reduce((a, b) => a + b, 0) : 0;
+                
+                if (data.action_statistics) {
+                    const todayActions = data.action_statistics['LOGIN'] || 0;
+                    document.getElementById('todayActions').textContent = todayActions;
+                }
+                
+                document.getElementById('actionStats').textContent = 
+                    Object.keys(data.action_statistics).length + ' 种操作';
+                
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+        
+        function formatAction(action) {
+            const actionMap = {
+                'LOGIN': '登录',
+                'LOGOUT': '登出',
+                'RELEASE_CREATE': '创建发布',
+                'RELEASE_PUBLISH': '发布版本',
+                'DOWNLOAD': '下载',
+                'LICENSE_CREATE': '创建许可证',
+                'BACKUP_CREATE': '创建备份',
+                'DELETE': '删除',
+                'REGISTER': '注册'
+            };
+            return actionMap[action] || action;
+        }
+        
+        function formatStatus(status) {
+            return status === 'SUCCESS' ? '成功' : '失败';
+        }
+        
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            
+            if (diffMs < 60000) {  # 1分钟内
+                return '刚刚';
+            } else if (diffMs < 3600000) {  # 1小时内
+                return Math.floor(diffMs / 60000) + '分钟前';
+            } else if (diffMs < 86400000) {  # 24小时内
+                return Math.floor(diffMs / 3600000) + '小时前';
+            } else {
+                return date.toLocaleDateString('zh-CN');
+            }
+        }
+        
+        function applyFilters() {
+            currentPage = 1;
+            loadLogs();
+        }
+        
+        function resetFilters() {
+            document.getElementById('filterForm').reset();
+            currentPage = 1;
+            loadLogs();
+        }
+        
+        function changePage(direction) {
+            if (direction === 'previous' && currentPage > 1) {
+                currentPage--;
+            } else if (direction === 'next' && currentPage < totalPages) {
+                currentPage++;
+            }
+            loadLogs();
+        }
+        
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            
+            if (totalPages > 1) {
+                pagination.style.display = 'block';
+                pagination.innerHTML = `
+                    <nav>
+                        <ul class="pagination">
+                            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                                <a class="page-link" href="#" onclick="changePage('previous')">上一页</a>
+                            </li>
+                            <li class="page-item active">
+                                <a class="page-link" href="#">${currentPage} / ${totalPages}</a>
+                            </li>
+                            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                                <a class="page-link" href="#" onclick="changePage('next')">下一页</a>
+                            </li>
+                        </ul>
+                    </nav>
+                `;
+            } else {
+                pagination.style.display = 'none';
+            }
+        }
+        
+        async function showLogDetail(logId) {
+            try {
+                const response = await fetch(`${API_BASE}/audit/logs/${logId}`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                if (data.log) {
+                    const log = data.log;
+                    const content = document.getElementById('logDetailContent');
+                    
+                    content.innerHTML = `
+                        <table class="table table-sm">
+                            <tr>
+                                <th>ID</th>
+                                <td>${log.id}</td>
+                            </tr>
+                            <tr>
+                                <th>操作</th>
+                                <td><span class="action-badge">${formatAction(log.action)}</span></td>
+                            </tr>
+                            <tr>
+                                <th>用户</th>
+                                <td>${log.username} (${log.role})</td>
+                            </tr>
+                            <tr>
+                                <th>时间</th>
+                                <td>${new Date(log.timestamp).toLocaleString('zh-CN')}</td>
+                            </tr>
+                            <tr>
+                                <th>IP 地址</th>
+                                <td>${log.ip_address || '-'}</td>
+                            </tr>
+                            <tr>
+                                <th>状态</th>
+                                <td><span class="status-badge status-${log.status.toLowerCase()}">${formatStatus(log.status)}</span></td>
+                            </tr>
+                            ${log.error_message ? `
+                            <tr>
+                                <th>错误信息</th>
+                                <td class="text-danger">${log.error_message}</td>
+                            </tr>
+                            ` : ''}
+                            ${log.resource_name ? `
+                            <tr>
+                                <th>资源</th>
+                                <td>${log.resource_name}</td>
+                            </tr>
+                            ` : ''}
+                        </table>
+                        
+                        ${Object.keys(log.details).length > 0 ? `
+                            <div class="log-details">
+                                <h6>详细信息</h6>
+                                <pre>${JSON.stringify(log.details, null, 2)}</pre>
+                            </div>
+                        ` : ''}
+                    `;
+                    
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('logDetailModal')).show();
+                }
+            } catch (error) {
+                console.error('Error loading log details:', error);
+                alert('加载失败: ' + error.message);
+            }
+        }
+        
+        async function exportLogs() {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('exportModal')).show();
+        }
+        
+        async function performExport() {
+            const format = document.getElementById('exportFormat').value;
+            const useFilters = document.getElementById('useCurrentFilters').checked;
+            
+            try {
+                let url = `${API_BASE}/audit/logs/export`;
+                let method = 'POST';
+                let body = null;
+                
+                if (useFilters) {
+                    body = JSON.stringify({
+                        format: format,
+                        filters: getCurrentFilters()
+                    });
+                } else {
+                    url += `?format=${format}`;
+                }
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: getAuthHeaders(),
+                    body: body
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // 下载文件
+                    const blob = new Blob([data.data], { type: data.content_type });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = data.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+                } else {
+                    const data = await response.json();
+                    alert('导出失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error exporting logs:', error);
+                alert('导出失败: ' + error.message);
+            }
+        }
+        
+        function getCurrentFilters() {
+            const filters = {};
+            
+            const username = document.getElementById('filterUsername').value;
+            const action = document.getElementById('filterAction').value;
+            const status = document.getElementById('filterStatus').value;
+            const startDate = document.getElementById('filterStartDate').value;
+            const endDate = document.getElementById('filterEndDate').value;
+            
+            if (username) filters['username'] = username;
+            if (action) filters['action'] = action;
+            if (status) filters['status'] = status;
+            if (startDate) filters['start_date'] = startDate;
+            if (endDate) filters['end_date'] = endDate;
+            
+            return filters;
+        }
+        
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '/login';
+        }
+        
+        document.getElementById('pageSize').addEventListener('change', () => {
+            pageSize = parseInt(document.getElementById('pageSize').value);
+            currentPage = 1;
+            loadLogs();
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLogs();
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

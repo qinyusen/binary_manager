@@ -59,6 +59,24 @@ def licenses():
     return render_template('licenses.html')
 
 
+@ui_bp.route('/backup')
+def backup():
+    """数据备份页面"""
+    if 'token' not in session:
+        return redirect(url_for('ui.login_page'))
+    
+    return render_template('backup.html')
+
+
+@ui_bp.route('/cold-backup')
+def cold_backup():
+    """冷备份页面"""
+    if 'token' not in session:
+        return redirect(url_for('ui.login_page'))
+    
+    return render_template('cold_backup.html')
+
+
 @ui_bp.route('/logout')
 def logout():
     """登出"""

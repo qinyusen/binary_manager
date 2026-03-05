@@ -5,7 +5,13 @@ Flask REST API 和 Web UI
 """
 from flask import Flask, jsonify
 from flask_cors import CORS
-from ..shared import Config
+import sys
+import os
+
+# 添加项目根目录到路径
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+
+from shared import Config
 
 
 def create_app(db_path: str = None):
@@ -30,11 +36,13 @@ def create_app(db_path: str = None):
     CORS(app)
     
     # 注册蓝图
-    from .api import auth_bp, releases_bp, downloads_bp, licenses_bp
+    from .api import auth_bp, releases_bp, downloads_bp, licenses_bp, backup_bp, cold_backup_bp
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(releases_bp, url_prefix='/api/releases')
     app.register_blueprint(downloads_bp, url_prefix='/api/downloads')
     app.register_blueprint(licenses_bp, url_prefix='/api/licenses')
+    app.register_blueprint(backup_bp, url_prefix='/api/backup')
+    app.register_blueprint(cold_backup_bp, url_prefix='/api/cold-backup')
     
     # 注册 Web UI 路由
     from .ui import ui_bp

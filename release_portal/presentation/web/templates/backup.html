@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据备份 - 地瓜机器人发布平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 15px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        .main-content {
+            padding: 30px;
+        }
+        .page-header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .backup-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        .backup-size {
+            font-weight: 600;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar p-0">
+                <div class="p-4">
+                    <h5>🤖 发布平台</h5>
+                    <p class="small mb-4">Release Portal V3</p>
+                    
+                    <nav class="nav flex-column">
+                        <a class="nav-link" href="/dashboard">
+                            <i class="bi bi-speedometer2 me-2"></i>仪表板
+                        </a>
+                        <a class="nav-link" href="/releases">
+                            <i class="bi bi-box-seam me-2"></i>发布管理
+                        </a>
+                        <a class="nav-link" href="/downloads">
+                            <i class="bi bi-download me-2"></i>下载中心
+                        </a>
+                        <a class="nav-link" href="/licenses">
+                            <i class="bi bi-key me-2"></i>许可证管理
+                        </a>
+                        <a class="nav-link active" href="/backup">
+                            <i class="bi bi-database-add me-2"></i>数据备份
+                        </a>
+                        <hr class="my-3" style="border-color: rgba(255,255,255,0.2);">
+                        <a class="nav-link" href="#" onclick="logout()">
+                            <i class="bi bi-box-arrow-right me-2"></i>登出
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            
+            <div class="col-md-10 main-content">
+                <div class="page-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2>数据备份</h2>
+                        <p class="text-muted mb-0">管理系统备份和恢复</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBackupModal">
+                            <i class="bi bi-plus-circle me-2"></i>创建备份
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm ms-2" onclick="loadBackups()">
+                            <i class="bi bi-arrow-clockwise"></i> 刷新
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="bi bi-hdd-stack display-4 text-primary"></i>
+                                <h5 class="mt-3">总备份数</h5>
+                                <p id="totalBackups" class="mb-0">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="bi bi-database display-4 text-success"></i>
+                                <h5 class="mt-3">数据库备份</h5>
+                                <p id="dbBackups" class="mb-0">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="bi bi-cloud-arrow-down display-4 text-info"></i>
+                                <h5 class="mt-3">总存储大小</h5>
+                                <p id="totalSize" class="mb-0">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="backupsList">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 创建备份模态框 -->
+    <div class="modal fade" id="createBackupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">创建新备份</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createBackupForm">
+                        <div class="mb-3">
+                            <label class="form-label">备份名称</label>
+                            <input type="text" class="form-control" id="backupName" placeholder="留空自动生成">
+                            <small class="text-muted">留空将自动生成名称（格式：backup_YYYYMMDD_HHMMSS）</small>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="includeStorage" checked>
+                                <label class="form-check-label" for="includeStorage">
+                                    包含存储文件
+                                </label>
+                                <small class="d-block text-muted">备份将包含发布的包文件</small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="createBackup()">创建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 恢复备份模态框 -->
+    <div class="modal fade" id="restoreBackupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">恢复备份</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>警告：</strong>恢复备份将覆盖当前数据，请确保已做好当前数据的备份！
+                    </div>
+                    
+                    <form id="restoreBackupForm">
+                        <input type="hidden" id="restoreFilename">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">备份文件</label>
+                            <p id="restoreFilenameDisplay" class="form-control-plaintext"></p>
+                        </div>
+                        
+                        <div class="mb-3" id="restoreMetadata"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" onclick="restoreBackup()">确认恢复</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        function getAuthHeaders() {
+            const token = sessionStorage.getItem('token');
+            return {
+                'Authorization': `Bearer ${token}`
+            };
+        }
+        
+        function getJsonHeaders() {
+            const token = sessionStorage.getItem('token');
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+        
+        async function loadBackups() {
+            const container = document.getElementById('backupsList');
+            
+            try {
+                const response = await fetch(`${API_BASE}/backup`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                if (data.backups && data.backups.length > 0) {
+                    // 更新统计
+                    document.getElementById('totalBackups').textContent = data.backups.length;
+                    document.getElementById('dbBackups').textContent = data.backups.length;
+                    
+                    const totalSize = data.backups.reduce((sum, b) => sum + (b.size || 0), 0);
+                    document.getElementById('totalSize').textContent = formatSize(totalSize);
+                    
+                    container.innerHTML = data.backups.map(backup => `
+                        <div class="backup-card">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-2">
+                                        <i class="bi bi-database-lock me-2"></i>
+                                        ${backup.filename}
+                                    </h5>
+                                    <div class="mb-2">
+                                        <span class="backup-size">${formatSize(backup.size)}</span>
+                                        <span class="text-muted ms-3">
+                                            <i class="bi bi-calendar me-1"></i>
+                                            ${new Date(backup.created_at).toLocaleString('zh-CN')}
+                                        </span>
+                                    </div>
+                                    ${backup.metadata ? `
+                                        <small class="text-muted">
+                                            ${backup.metadata.includes_storage ? 
+                                                '<i class="bi bi-check-circle text-success"></i> 包含存储' : 
+                                                '<i class="bi bi-database text-primary"></i> 仅数据库'}
+                                        </small>
+                                    ` : ''}
+                                </div>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="downloadBackup('${backup.filename}')">
+                                        <i class="bi bi-download"></i> 下载
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="showRestoreModal('${backup.filename}')">
+                                        <i class="bi bi-arrow-counterclockwise"></i> 恢复
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteBackup('${backup.filename}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox display-4 text-muted"></i>
+                            <p class="text-muted mt-3">暂无备份记录</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading backups:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        加载失败: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        async function createBackup() {
+            const name = document.getElementById('backupName').value;
+            const includeStorage = document.getElementById('includeStorage').checked;
+            
+            try {
+                const response = await fetch(`${API_BASE}/backup/create`, {
+                    method: 'POST',
+                    headers: getJsonHeaders(),
+                    body: JSON.stringify({
+                        name: name || null,
+                        include_storage: includeStorage
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('备份创建成功');
+                    bootstrap.Modal.getInstance(document.getElementById('createBackupModal')).hide();
+                    document.getElementById('createBackupForm').reset();
+                    loadBackups();
+                } else {
+                    const data = await response.json();
+                    alert('创建失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error creating backup:', error);
+                alert('创建失败: ' + error.message);
+            }
+        }
+        
+        function showRestoreModal(filename) {
+            document.getElementById('restoreFilename').value = filename;
+            document.getElementById('restoreFilenameDisplay').textContent = filename;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('restoreBackupModal')).show();
+        }
+        
+        async function restoreBackup() {
+            const filename = document.getElementById('restoreFilename').value;
+            
+            if (!confirm('确定要恢复此备份吗？当前数据将被覆盖！')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/backup/restore`, {
+                    method: 'POST',
+                    headers: getJsonHeaders(),
+                    body: JSON.stringify({
+                        backup_filename: filename
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('备份恢复成功！系统将重新加载...');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    const data = await response.json();
+                    alert('恢复失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error restoring backup:', error);
+                alert('恢复失败: ' + error.message);
+            }
+        }
+        
+        async function downloadBackup(filename) {
+            try {
+                const response = await fetch(`${API_BASE}/backup/${filename}/download`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    alert('下载失败');
+                }
+            } catch (error) {
+                console.error('Error downloading backup:', error);
+                alert('下载失败: ' + error.message);
+            }
+        }
+        
+        async function deleteBackup(filename) {
+            if (!confirm(`确定要删除备份 "${filename}" 吗？`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/backup/${filename}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    alert('删除成功');
+                    loadBackups();
+                } else {
+                    const data = await response.json();
+                    alert('删除失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error deleting backup:', error);
+                alert('删除失败: ' + error.message);
+            }
+        }
+        
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+        
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '/login';
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBackups();
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

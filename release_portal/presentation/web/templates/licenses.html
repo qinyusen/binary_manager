@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>许可证管理 - 地瓜机器人发布平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 15px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+        }
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        .main-content {
+            padding: 30px;
+        }
+        .page-header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .license-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        .status-active {
+            color: #198754;
+        }
+        .status-inactive {
+            color: #dc3545;
+        }
+        .access-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .access-full { background-color: #0d6efd; color: #fff; }
+        .access-limited { background-color: #ffc107; color: #000; }
+        .access-basic { background-color: #6c757d; color: #fff; }
+        .resource-tag {
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            background-color: #e9ecef;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar p-0">
+                <div class="p-4">
+                    <h5>🤖 发布平台</h5>
+                    <p class="small mb-4">Release Portal V3</p>
+                    
+                    <nav class="nav flex-column">
+                        <a class="nav-link" href="/dashboard">
+                            <i class="bi bi-speedometer2 me-2"></i>仪表板
+                        </a>
+                        <a class="nav-link" href="/releases">
+                            <i class="bi bi-box-seam me-2"></i>发布管理
+                        </a>
+                        <a class="nav-link" href="/downloads">
+                            <i class="bi bi-download me-2"></i>下载中心
+                        </a>
+                        <a class="nav-link active" href="/licenses">
+                            <i class="bi bi-key me-2"></i>许可证管理
+                        </a>
+                        <hr class="my-3" style="border-color: rgba(255,255,255,0.2);">
+                        <a class="nav-link" href="#" onclick="logout()">
+                            <i class="bi bi-box-arrow-right me-2"></i>登出
+                        </a>
+                    </nav>
+                </div>
+            </div>
+            
+            <div class="col-md-10 main-content">
+                <div class="page-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2>许可证管理</h2>
+                        <p class="text-muted mb-0">管理组织许可证和访问权限</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" id="createLicenseBtn" data-bs-toggle="modal" data-bs-target="#createLicenseModal">
+                            <i class="bi bi-plus-circle me-2"></i>创建许可证
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm ms-2" onclick="loadLicenses()">
+                            <i class="bi bi-arrow-clockwise"></i> 刷新
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="activeOnly" onchange="loadLicenses()">
+                            <label class="form-check-label" for="activeOnly">仅显示激活的许可证</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="licensesList">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="createLicenseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">创建新许可证</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createLicenseForm">
+                        <div class="mb-3">
+                            <label class="form-label">组织名称</label>
+                            <input type="text" class="form-control" id="organization" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">访问级别</label>
+                            <select class="form-select" id="accessLevel" required>
+                                <option value="">请选择...</option>
+                                <option value="FULL_ACCESS">完全访问</option>
+                                <option value="LIMITED_ACCESS">限制访问</option>
+                                <option value="BASIC_ACCESS">基础访问</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">允许的资源类型</label>
+                            <div class="form-check">
+                                <input class="form-check-input resource-type-check" type="checkbox" value="BSP" checked>
+                                <label class="form-check-label">BSP</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input resource-type-check" type="checkbox" value="DRIVER" checked>
+                                <label class="form-check-label">驱动</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input resource-type-check" type="checkbox" value="EXAMPLES" checked>
+                                <label class="form-check-label">示例</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">有效期</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="days" placeholder="天数" min="1">
+                                <span class="input-group-text">天</span>
+                            </div>
+                            <small class="text-muted">例如：365 表示一年</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="createLicense()">创建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="extendLicenseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">延期许可证</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="extendLicenseForm">
+                        <input type="hidden" id="extendLicenseId">
+                        <div class="mb-3">
+                            <label class="form-label">延期方式</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="extendType" id="extendDays" value="days" checked>
+                                <label class="form-check-label" for="extendDays">延期天数</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="extendType" id="extendDate" value="date">
+                                <label class="form-check-label" for="extendDate">延期到指定日期</label>
+                            </div>
+                        </div>
+                        <div class="mb-3" id="daysInput">
+                            <label class="form-label">延期天数</label>
+                            <input type="number" class="form-control" id="extendDaysValue" placeholder="30" min="1">
+                        </div>
+                        <div class="mb-3 d-none" id="dateInput">
+                            <label class="form-label">目标日期</label>
+                            <input type="date" class="form-control" id="extendDateValue">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="extendLicense()">延期</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let currentUser = null;
+        
+        function getAuthHeaders() {
+            const token = sessionStorage.getItem('token');
+            return {
+                'Authorization': `Bearer ${token}`
+            };
+        }
+        
+        function getJsonHeaders() {
+            const token = sessionStorage.getItem('token');
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+        
+        async function checkAdminRole() {
+            try {
+                const userStr = sessionStorage.getItem('user');
+                if (!userStr) {
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                const user = JSON.parse(userStr);
+                currentUser = user;
+                
+                if (user.role !== 'Admin') {
+                    document.getElementById('createLicenseBtn').style.display = 'none';
+                    return false;
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Error checking role:', error);
+                return false;
+            }
+        }
+        
+        async function loadLicenses() {
+            const container = document.getElementById('licensesList');
+            const activeOnly = document.getElementById('activeOnly').checked;
+            
+            try {
+                let url = `${API_BASE}/licenses`;
+                if (activeOnly) {
+                    url += '?active_only=true';
+                }
+                
+                const response = await fetch(url, { headers: getAuthHeaders() });
+                const data = await response.json();
+                
+                if (data.licenses && data.licenses.length > 0) {
+                    container.innerHTML = data.licenses.map(license => {
+                        const isActive = license.is_active;
+                        const statusClass = isActive ? 'status-active' : 'status-inactive';
+                        const statusIcon = isActive ? 'check-circle-fill' : 'x-circle-fill';
+                        const statusText = isActive ? '激活' : '未激活';
+                        
+                        return `
+                            <div class="license-card">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <h5 class="mb-0 me-2">${license.organization}</h5>
+                                            <span class="access-badge access-${license.access_level.toLowerCase().replace('_access', '')}">
+                                                ${license.access_level}
+                                            </span>
+                                            <span class="badge ${isActive ? 'bg-success' : 'bg-danger'} ms-2">
+                                                <i class="bi bi-${statusIcon}"></i> ${statusText}
+                                            </span>
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <strong>资源类型:</strong>
+                                            ${license.allowed_resource_types.map(rt => 
+                                                `<span class="resource-tag ms-1">${rt}</span>`
+                                            ).join('')}
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <strong>许可证ID:</strong>
+                                            <code class="ms-1">${license.license_id}</code>
+                                        </div>
+                                        
+                                        <div>
+                                            <strong>有效期:</strong>
+                                            ${license.expires_at 
+                                                ? new Date(license.expires_at).toLocaleDateString('zh-CN')
+                                                : '永久'}
+                                        </div>
+                                    </div>
+                                    
+                                    ${currentUser && currentUser.role === 'Admin' ? `
+                                        <div class="btn-group">
+                                            ${isActive ? `
+                                                <button class="btn btn-sm btn-warning" onclick="showExtendModal('${license.license_id}')">
+                                                    <i class="bi bi-calendar-plus"></i> 延期
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="revokeLicense('${license.license_id}')">
+                                                    <i class="bi bi-dash-circle"></i> 撤销
+                                                </button>
+                                            ` : `
+                                                <button class="btn btn-sm btn-success" onclick="activateLicense('${license.license_id}')">
+                                                    <i class="bi bi-check-circle"></i> 激活
+                                                </button>
+                                            `}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="text-center py-5">
+                            <i class="bi bi-key display-4 text-muted"></i>
+                            <p class="text-muted mt-3">暂无许可证记录</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading licenses:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        加载失败: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        async function createLicense() {
+            const organization = document.getElementById('organization').value;
+            const accessLevel = document.getElementById('accessLevel').value;
+            const days = document.getElementById('days').value;
+            
+            const allowedResourceTypes = [];
+            document.querySelectorAll('.resource-type-check:checked').forEach(cb => {
+                allowedResourceTypes.push(cb.value);
+            });
+            
+            if (!organization || !accessLevel || allowedResourceTypes.length === 0) {
+                alert('请填写必填字段');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/licenses`, {
+                    method: 'POST',
+                    headers: getJsonHeaders(),
+                    body: JSON.stringify({
+                        organization,
+                        access_level: accessLevel,
+                        allowed_resource_types: allowedResourceTypes,
+                        days: days ? parseInt(days) : null
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('许可证创建成功');
+                    bootstrap.Modal.getInstance(document.getElementById('createLicenseModal')).hide();
+                    document.getElementById('createLicenseForm').reset();
+                    loadLicenses();
+                } else {
+                    const data = await response.json();
+                    alert('创建失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error creating license:', error);
+                alert('创建失败: ' + error.message);
+            }
+        }
+        
+        function showExtendModal(licenseId) {
+            document.getElementById('extendLicenseId').value = licenseId;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('extendLicenseModal')).show();
+        }
+        
+        async function extendLicense() {
+            const licenseId = document.getElementById('extendLicenseId').value;
+            const extendType = document.querySelector('input[name="extendType"]:checked').value;
+            
+            let body = {};
+            if (extendType === 'days') {
+                const days = document.getElementById('extendDaysValue').value;
+                if (!days) {
+                    alert('请输入延期天数');
+                    return;
+                }
+                body = { days: parseInt(days) };
+            } else {
+                const date = document.getElementById('extendDateValue').value;
+                if (!date) {
+                    alert('请选择目标日期');
+                    return;
+                }
+                body = { date };
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/licenses/${licenseId}/extend`, {
+                    method: 'POST',
+                    headers: getJsonHeaders(),
+                    body: JSON.stringify(body)
+                });
+                
+                if (response.ok) {
+                    alert('延期成功');
+                    bootstrap.Modal.getInstance(document.getElementById('extendLicenseModal')).hide();
+                    loadLicenses();
+                } else {
+                    const data = await response.json();
+                    alert('延期失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error extending license:', error);
+                alert('延期失败: ' + error.message);
+            }
+        }
+        
+        async function revokeLicense(licenseId) {
+            if (!confirm('确定要撤销此许可证吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/licenses/${licenseId}/revoke`, {
+                    method: 'POST',
+                    headers: getJsonHeaders()
+                });
+                
+                if (response.ok) {
+                    alert('撤销成功');
+                    loadLicenses();
+                } else {
+                    const data = await response.json();
+                    alert('撤销失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error revoking license:', error);
+                alert('撤销失败: ' + error.message);
+            }
+        }
+        
+        async function activateLicense(licenseId) {
+            if (!confirm('确定要激活此许可证吗？')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/licenses/${licenseId}/activate`, {
+                    method: 'POST',
+                    headers: getJsonHeaders()
+                });
+                
+                if (response.ok) {
+                    alert('激活成功');
+                    loadLicenses();
+                } else {
+                    const data = await response.json();
+                    alert('激活失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error activating license:', error);
+                alert('激活失败: ' + error.message);
+            }
+        }
+        
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = '/login';
+        }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAdminRole();
+            loadLicenses();
+            
+            document.querySelectorAll('input[name="extendType"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    if (e.target.value === 'days') {
+                        document.getElementById('daysInput').classList.remove('d-none');
+                        document.getElementById('dateInput').classList.add('d-none');
+                    } else {
+                        document.getElementById('daysInput').classList.add('d-none');
+                        document.getElementById('dateInput').classList.remove('d-none');
+                    }
+                });
+            });
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

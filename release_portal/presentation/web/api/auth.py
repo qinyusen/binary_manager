@@ -2,7 +2,7 @@
 认证 REST API
 """
 from flask import Blueprint, request, jsonify
-from ...shared import AuthenticationError, ValidationError
+from ....shared import AuthenticationError, ValidationError
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -89,7 +89,7 @@ def login():
 @auth_bp.route('/verify', methods=['GET'])
 def verify_token():
     """验证 Token 有效性"""
-    from .auth_middleware import require_auth
+    from release_portal.presentation.web.auth_middleware import require_auth
     
     @require_auth
     def _verify():
@@ -144,7 +144,7 @@ def verify_token():
 @auth_bp.route('/logout', methods=['POST'])
 def logout():
     """用户登出"""
-    from .auth_middleware import require_auth
+    from release_portal.presentation.web.auth_middleware import require_auth
     
     @require_auth
     def _logout():
@@ -171,7 +171,7 @@ def logout():
 @auth_bp.route('/register', methods=['POST'])
 def register():
     """注册新用户"""
-    from .auth_middleware import require_role
+    from release_portal.presentation.web.auth_middleware import require_role
     
     @require_role('Admin')
     def _register():

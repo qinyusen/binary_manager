@@ -3,7 +3,7 @@
 """
 from flask import Blueprint, request, jsonify
 from ..auth_middleware import require_auth, require_role
-from ...domain.value_objects import AccessLevel, ResourceType
+from release_portal.domain.value_objects import AccessLevel, ResourceType
 from datetime import datetime, timedelta
 
 licenses_bp = Blueprint('licenses', __name__)
@@ -23,7 +23,7 @@ def list_licenses():
         }
     """
     try:
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         
         container = create_container()
         
@@ -59,7 +59,7 @@ def get_license(license_id: str):
         }
     """
     try:
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         
         container = create_container()
         license = container.license_service.get_license(license_id)
@@ -137,7 +137,7 @@ def create_license():
             expires_at = datetime.now() + timedelta(days=days)
         
         # 创建许可证
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         container = create_container()
         
         license = container.license_service.create_license(
@@ -172,7 +172,7 @@ def revoke_license(license_id: str):
         }
     """
     try:
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         
         container = create_container()
         container.license_service.revoke_license(license_id)
@@ -199,7 +199,7 @@ def activate_license(license_id: str):
         }
     """
     try:
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         
         container = create_container()
         container.license_service.activate_license(license_id)
@@ -250,7 +250,7 @@ def extend_license(license_id: str):
             }), 400
         
         # 延期
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         container = create_container()
         
         if days:
