@@ -2,7 +2,7 @@
 冷备份 REST API
 """
 from flask import Blueprint, request, jsonify, send_file
-from ..auth_middleware import require_role
+from release_portal.presentation.web.auth_middleware import require_role
 import sys
 import os
 

@@ -31,6 +31,7 @@ def create_app(db_path: str = None):
     app.config['SECRET_KEY'] = Config.get_secret_key()
     app.config['JSON_AS_ASCII'] = False
     app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB
+    app.config['DB_PATH'] = db_path  # 存储数据库路径
     
     # 启用 CORS
     CORS(app)

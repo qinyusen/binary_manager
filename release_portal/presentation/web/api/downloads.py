@@ -2,7 +2,7 @@
 下载 REST API
 """
 from flask import Blueprint, request, jsonify, send_file
-from ..auth_middleware import require_auth
+from release_portal.presentation.web.auth_middleware import require_auth
 import tempfile
 import os
 

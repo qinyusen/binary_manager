@@ -2,7 +2,7 @@
 认证 REST API
 """
 from flask import Blueprint, request, jsonify
-from ....shared import AuthenticationError, ValidationError
+from release_portal.shared import AuthenticationError, ValidationError
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -51,8 +51,10 @@ def login():
             }), 400
         
         # 登录
-        from ...initializer import create_container
-        container = create_container()
+        from flask import current_app
+        from release_portal.initializer import create_container
+        db_path = current_app.config.get('DB_PATH')
+        container = create_container(db_path)
         
         token = container.auth_service.login(username, password)
         
@@ -217,8 +219,10 @@ def register():
                 }), 400
             
             # 注册用户
-            from ...initializer import create_container
-            container = create_container()
+            from flask import current_app
+            from release_portal.initializer import create_container
+            db_path = current_app.config.get('DB_PATH')
+            container = create_container(db_path)
             
             user = container.auth_service.register(
                 username=username,

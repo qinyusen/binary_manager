@@ -2,14 +2,6 @@
 审计日志 REST API
 """
 from flask import Blueprint, request, jsonify
-from ..auth_middleware import require_role
-import sys
-import os
-
-# 添加项目根目录到路径
-_project_root = os.path.join(os.path.dirname(__file__), '../../../..')
-sys.path.insert(0, _project_root)
-
 from release_portal.presentation.web.auth_middleware import require_role
 
 audit_bp = Blueprint('audit', __name__)
@@ -40,10 +32,12 @@ def list_audit_logs():
         }
     """
     try:
-        from ...initializer import create_container
-        from ...domain.entities.audit_log import AuditLogFilter, AuditAction
+        from release_portal.initializer import create_container
+        from release_portal.domain.entities.audit_log import AuditLogFilter, AuditAction
         
-        container = create_container()
+        from flask import current_app
+        db_path = current_app.config.get('DB_PATH')
+        container = create_container(db_path)
         
         # 获取查询参数
         user_id = request.args.get('user_id')
@@ -127,10 +121,12 @@ def get_statistics():
         }
     """
     try:
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         from datetime import datetime
         
-        container = create_container()
+        from flask import current_app
+        db_path = current_app.config.get('DB_PATH')
+        container = create_container(db_path)
         
         # 获取参数
         start_date_str = request.args.get('start_date')
@@ -173,12 +169,14 @@ def get_statistics():
 def get_log_details(log_id: int):
     """获取单条审计日志详情"""
     try:
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         
-        container = create_container()
+        from flask import current_app
+        db_path = current_app.config.get('DB_PATH')
+        container = create_container(db_path)
         
         # 创建过滤器
-        from ...domain.entities.audit_log import AuditLogFilter
+        from release_portal.domain.entities.audit_log import AuditLogFilter
         filters = AuditLogFilter()
         filters.resource_id = str(log_id)
         
@@ -218,9 +216,11 @@ def cleanup_old_logs():
         }
     """
     try:
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         
-        container = create_container()
+        from flask import current_app
+        db_path = current_app.config.get('DB_PATH')
+        container = create_container(db_path)
         
         data = request.get_json() or {}
         retention_days = data.get('retention_days', 90)
@@ -253,19 +253,21 @@ def export_logs():
     Response: CSV/JSON file download
     """
     try:
-        from ...initializer import create_container
+        from release_portal.initializer import create_container
         from datetime import datetime
         import csv
         import io
         
-        container = create_container()
+        from flask import current_app
+        db_path = current_app.config.get('DB_PATH')
+        container = create_container(db_path)
         
         data = request.get_json() or {}
         filters_data = data.get('filters', {})
         export_format = data.get('format', 'csv')
         
         # 构建过滤器
-        from ...domain.entities.audit_log import AuditLogFilter, AuditAction
+        from release_portal.domain.entities.audit_log import AuditLogFilter, AuditAction
         filters = AuditLogFilter()
         
         if filters_data:

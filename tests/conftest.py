@@ -32,15 +32,15 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 
-@pytest.fixture(scope="session")
-def test_db_path(tmp_path_factory):
-    """创建测试数据库路径"""
-    return str(tmp_path_factory.mktemp("data") / "test_portal.db")
+@pytest.fixture(scope="function")
+def test_db_path(tmp_path):
+    """创建测试数据库路径（每个测试函数独立）"""
+    return str(tmp_path / "test_portal.db")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def db_initializer(test_db_path):
-    """初始化测试数据库"""
+    """初始化测试数据库（每个测试函数独立）"""
     from release_portal.initializer import DatabaseInitializer
     
     import os
@@ -80,7 +80,7 @@ def client(app):
     return app.test_client()
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def test_users(container):
     """创建测试用户"""
     users = {}

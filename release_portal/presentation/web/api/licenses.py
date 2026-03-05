@@ -2,7 +2,7 @@
 许可证管理 REST API
 """
 from flask import Blueprint, request, jsonify
-from ..auth_middleware import require_auth, require_role
+from release_portal.presentation.web.auth_middleware import require_auth, require_role
 from release_portal.domain.value_objects import AccessLevel, ResourceType
 from datetime import datetime, timedelta
 
