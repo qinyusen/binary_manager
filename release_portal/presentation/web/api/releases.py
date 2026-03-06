@@ -14,6 +14,7 @@ sys.path.insert(0, _project_root)
 
 from release_portal.presentation.web.auth_middleware import require_auth, require_role
 from release_portal.domain.value_objects import ResourceType, ContentType, ReleaseStatus
+from release_portal.shared.file_security import FileValidator, validate_uploaded_file, FileSecurityError
 
 releases_bp = Blueprint('releases', __name__)
 
@@ -117,8 +118,8 @@ def get_release(release_id: str):
 
 
 def allowed_file(filename: str) -> bool:
-    """检查文件扩展名是否允许"""
-    return any(filename.endswith(ext) for ext in ALLOWED_EXTENSIONS)
+    """检查文件扩展名是否允许（向后兼容）"""
+    return FileValidator.validate_file_upload(filename)[0]
 
 
 @releases_bp.route('/<release_id>/packages', methods=['POST'])
@@ -156,10 +157,12 @@ def upload_package(release_id: str):
                 'message': 'No file selected'
             }), 400
         
-        if not allowed_file(file.filename):
+        # 使用新的安全验证器
+        is_valid, error_msg = validate_uploaded_file(file, file.filename)
+        if not is_valid:
             return jsonify({
                 'error': 'Bad Request',
-                'message': f'Invalid file type. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'
+                'message': error_msg
             }), 400
         
         # 获取内容类型
@@ -315,6 +318,12 @@ def create_release():
 def publish_release(release_id: str):
     """发布版本
     
+    Request Body (optional):
+        {
+            "run_tests": boolean,      # 是否运行测试
+            "test_level": string        # 测试级别
+        }
+    
     Response:
         {
             "release": {...}
@@ -333,10 +342,17 @@ def publish_release(release_id: str):
                 'message': 'User not authenticated'
             }), 401
         
+        # 获取请求参数
+        data = request.get_json() or {}
+        run_tests = data.get('run_tests', False)
+        test_level = data.get('test_level', 'critical')
+        
         # 发布
         release = container.release_service.publish_release(
             release_id=release_id,
-            user_id=user.user_id
+            user_id=user.user_id,
+            run_tests=run_tests,
+            test_level=test_level
         )
         
         return jsonify(release.to_dict()), 200

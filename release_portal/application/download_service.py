@@ -1,9 +1,13 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, TYPE_CHECKING
 from ..domain.entities.user import User
 from ..domain.entities.release import Release
+from ..domain.entities.audit_log import AuditAction
 from ..domain.value_objects import ContentType
 from ..domain.repositories import UserRepository, ReleaseRepository
 from ..domain.services import IStorageService, IAuthorizationService
+
+if TYPE_CHECKING:
+    from .audit_service import AuditService
 
 
 class DownloadService:
@@ -14,12 +18,14 @@ class DownloadService:
         user_repository: UserRepository,
         release_repository: ReleaseRepository,
         storage_service: IStorageService,
-        authorization_service: IAuthorizationService
+        authorization_service: IAuthorizationService,
+        audit_service: Optional['AuditService'] = None
     ):
         self._user_repository = user_repository
         self._release_repository = release_repository
         self._storage_service = storage_service
         self._authorization_service = authorization_service
+        self._audit_service = audit_service
     
     def get_available_packages(self, user_id: str, release_id: str) -> List[Dict]:
         """获取用户可下载的包列表

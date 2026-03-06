@@ -174,7 +174,16 @@ class PortalCLI:
                 print(f"  ✓ Document package ID: {pkg_id}")
             
             if not args.draft:
-                self.container.release_service.publish_release(release.release_id)
+                # 检查是否需要运行测试
+                run_tests = getattr(args, 'test', False)
+                test_level = getattr(args, 'test_level', 'critical')
+                
+                self.container.release_service.publish_release(
+                    release.release_id,
+                    user_id=user.user_id,
+                    run_tests=run_tests,
+                    test_level=test_level
+                )
                 print(f"✓ Release published successfully")
             else:
                 print(f"✓ Draft saved. Use 'release-portal publish --release-id {release.release_id} --publish' to publish")
@@ -334,6 +343,9 @@ def main():
     publish_parser.add_argument('--description', help='Description')
     publish_parser.add_argument('--changelog', help='Changelog')
     publish_parser.add_argument('--draft', action='store_true', help='Save as draft')
+    publish_parser.add_argument('--test', action='store_true', help='Run tests before publishing')
+    publish_parser.add_argument('--test-level', choices=['critical', 'all', 'api', 'integration'], 
+                                default='critical', help='Test level (default: critical)')
     publish_parser.set_defaults(func=cli.publish)
     
     # List command

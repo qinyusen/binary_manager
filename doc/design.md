@@ -83,34 +83,42 @@ examples-diggo-v1.5.0-doc.tar.gz
 ┌─────────────────────────────────────────────────┐
 │   Presentation Layer                            │
 │   ├── CLI (发布工具)                            │
-│   └── Web UI (Flask API + 前端页面)             │
+│   ├── Web UI (Flask API + 前端页面)             │
+│   └── TUI (终端界面)                            │ ✅ 新增
 ├─────────────────────────────────────────────────┤
-│   Application Layer (NEW - Release Portal)      │
+│   Application Layer (Release Portal)            │
 │   ├── ReleaseService (发布服务)                 │
 │   ├── AuthService (认证服务)                    │
 │   ├── DownloadService (下载服务)                │
-│   └── LicenseService (许可证服务)               │
+│   ├── LicenseService (许可证服务)               │
+│   ├── AuditService (审计服务)                   │ ✅ 新增
+│   ├── BackupService (备份服务)                  │ ✅ 新增
+│   └── TestRunner (测试运行器)                   │ ✅ 新增
 ├─────────────────────────────────────────────────┤
-│   Binary Manager V2 (现有层)                    │
+│   Binary Manager V2                             │
 │   ├── PublisherService (打包服务)               │
 │   ├── DownloaderService (下载服务)              │
 │   └── GroupService (分组服务)                   │
 ├─────────────────────────────────────────────────┤
 │   Domain Layer (领域层)                         │
-│   ├── User, Role, License (新增实体)            │
-│   ├── Package, Version (现有实体)               │
-│   └── Release (新增实体)                        │
+│   ├── User, Role, License (实体)                │
+│   ├── Package, Version (实体)                   │
+│   ├── Release (实体)                            │
+│   ├── AuditLog (实体)                           │ ✅ 新增
+│   ├── Backup (实体)                             │ ✅ 新增
+│   └── ColdBackup (实体)                         │ ✅ 新增
 ├─────────────────────────────────────────────────┤
 │   Infrastructure Layer (基础设施层)              │
-│   ├── SQLite (用户、权限数据库)                 │
+│   ├── SQLite (数据库)                           │
 │   ├── Storage (S3/本地存储)                     │
-│   └── Git (现有 Git 服务)                       │
+│   ├── Git (Git 服务)                            │
+│   └── Auth (JWT Token 服务)                     │
 └─────────────────────────────────────────────────┘
 ```
 
 ### 3.2 目录结构
 ```
-release_portal/                  # 新的发布平台模块
+release_portal/                  # 发布平台模块
 ├── domain/                      # 领域层
 │   ├── entities/
 │   │   ├── user.py             # 用户实体
@@ -121,31 +129,50 @@ release_portal/                  # 新的发布平台模块
 │   ├── repositories/
 │   │   ├── user_repository.py  # 用户仓储接口
 │   │   ├── role_repository.py  # 角色仓储接口
-│   │   └── license_repository.py # 许可证仓储接口
+│   │   ├── license_repository.py # 许可证仓储接口
+│   │   └── release_repository.py # 发布仓储接口
 │   └── services/
 │       └── auth_service.py     # 认证领域服务
 ├── infrastructure/
 │   ├── database/
 │   │   ├── sqlite_user_repository.py
 │   │   ├── sqlite_role_repository.py
-│   │   └── sqlite_license_repository.py
+│   │   ├── sqlite_license_repository.py
+│   │   └── sqlite_release_repository.py
 │   └── auth/
-│       └── jwt_token_service.py # JWT Token 服务
+│       └── token_service.py    # JWT Token 服务
 ├── application/
 │   ├── release_service.py      # 发布服务（编排）
 │   ├── auth_service.py         # 认证服务（编排）
 │   ├── download_service.py     # 下载服务（权限过滤）
-│   └── license_service.py      # 许可证管理服务
+│   ├── license_service.py      # 许可证管理服务
+│   ├── audit_service.py        # 审计服务 ✅ 新增
+│   ├── backup_service.py       # 备份服务 ✅ 新增
+│   └── test_runner.py          # 测试运行器 ✅ 新增
 ├── presentation/
 │   ├── cli/
 │   │   └── portal_cli.py       # 发布工具 CLI
-│   └── web/
-│       ├── app.py              # Flask 应用
-│       ├── api/
-│       │   ├── auth.py         # 认证 API
-│       │   ├── releases.py     # 发布 API
-│       │   └── download.py     # 下载 API
-│       └── templates/          # 前端模板
+│   ├── web/
+│   │   ├── app.py              # Flask 应用
+│   │   ├── api/
+│   │   │   ├── auth.py         # 认证 API
+│   │   │   ├── releases.py     # 发布 API
+│   │   │   ├── downloads.py    # 下载 API
+│   │   │   ├── licenses.py     # 许可证 API
+│   │   │   ├── audit.py        # 审计 API ✅ 新增
+│   │   │   ├── backup.py       # 备份 API ✅ 新增
+│   │   │   └── cold_backup.py  # 冷备份 API ✅ 新增
+│   │   └── templates/          # 前端模板
+│   │       ├── login.html      # 登录页
+│   │       ├── dashboard.html  # 仪表盘 ✅ 新增
+│   │       ├── releases.html   # 发布管理
+│   │       ├── downloads.html  # 下载中心
+│   │       ├── licenses.html   # 许可证管理
+│   │       ├── backup.html     # 备份管理 ✅ 新增
+│   │       ├── cold_backup.html # 冷备份管理 ✅ 新增
+│   │       └── audit.html      # 审计日志 ✅ 新增
+│   └── tui/                    # 终端界面 ✅ 新增
+│       └── curses_cli.py
 ├── shared/
 │   ├── config.py               # 配置管理
 │   └── exceptions.py           # 异常定义
@@ -284,6 +311,90 @@ CREATE TABLE releases (
     FOREIGN KEY (binary_package_id) REFERENCES packages(id),
     FOREIGN KEY (doc_package_id) REFERENCES packages(id)
 );
+
+-- 审计日志表 ✅ 新增
+CREATE TABLE audit_logs (
+    log_id TEXT PRIMARY KEY,
+    user_id TEXT,
+    username TEXT,
+    action TEXT NOT NULL,          -- 'login', 'publish', 'download', etc.
+    resource_type TEXT,
+    resource_id TEXT,
+    details TEXT,                  -- JSON 格式
+    ip_address TEXT,
+    user_agent TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- 备份表 ✅ 新增
+CREATE TABLE backups (
+    backup_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    size INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by TEXT,
+    includes_storage BOOLEAN DEFAULT 0,
+    metadata TEXT,                 -- JSON 格式
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
+);
+
+-- 冷备份表 ✅ 新增
+CREATE TABLE cold_backups (
+    backup_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    size INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    storage_location TEXT,         -- 'local', 's3', 'azure', etc.
+    checksum TEXT,
+    metadata TEXT                  -- JSON 格式
+);
+```
+
+### 4.7 审计日志（AuditLog）✅ 新增
+
+```python
+class AuditLog:
+    log_id: str
+    user_id: str
+    username: str
+    action: str              # login, publish, download, etc.
+    resource_type: str
+    resource_id: str
+    details: Dict
+    ip_address: str
+    user_agent: str
+    timestamp: datetime
+```
+
+### 4.8 备份（Backup）✅ 新增
+
+```python
+class Backup:
+    backup_id: str
+    name: str
+    filename: str
+    size: int
+    created_at: datetime
+    created_by: str
+    includes_storage: bool
+    metadata: Dict
+```
+
+### 4.9 冷备份（ColdBackup）✅ 新增
+
+```python
+class ColdBackup:
+    backup_id: str
+    name: str
+    filename: str
+    size: int
+    created_at: datetime
+    storage_location: str    # local/s3/azure
+    checksum: str
+    metadata: Dict
 ```
 
 ---
@@ -554,6 +665,193 @@ Response: {"licenses": [...]}
 DELETE /api/licenses/{license_id}
 ```
 
+### 6.3 审计 API ✅ 新增
+
+```python
+# 获取审计日志
+GET /api/audit/logs
+Query Parameters:
+  - start_date: 开始日期 (ISO 8601)
+  - end_date: 结束日期 (ISO 8601)
+  - user_id: 用户ID (可选)
+  - action: 操作类型 (可选，如 login, publish, download)
+  - resource_type: 资源类型 (可选)
+  - page: 页码 (默认 1)
+  - per_page: 每页数量 (默认 50)
+Headers: Authorization: Bearer <token>
+Response: {
+  "logs": [
+    {
+      "log_id": "log_123",
+      "user_id": "user_456",
+      "username": "admin",
+      "action": "publish",
+      "resource_type": "BSP",
+      "resource_id": "rel_789",
+      "details": {...},
+      "ip_address": "192.168.1.100",
+      "timestamp": "2026-03-06T10:30:00Z"
+    }
+  ],
+  "total": 100,
+  "page": 1,
+  "per_page": 50
+}
+
+# 导出审计日志
+GET /api/audit/logs/export
+Query Parameters:
+  - start_date: 开始日期
+  - end_date: 结束日期
+  - format: 导出格式 (csv, xlsx, json)
+Headers: Authorization: Bearer <token>
+Response: File download (CSV/Excel/JSON)
+
+# 获取审计统计
+GET /api/audit/stats
+Query Parameters:
+  - start_date: 开始日期
+  - end_date: 结束日期
+Headers: Authorization: Bearer <token>
+Response: {
+  "total_actions": 1000,
+  "unique_users": 50,
+  "actions_by_type": {
+    "login": 200,
+    "publish": 50,
+    "download": 750
+  },
+  "actions_by_resource": {
+    "BSP": 300,
+    "DRIVER": 400,
+    "EXAMPLES": 300
+  }
+}
+```
+
+### 6.4 备份 API ✅ 新增
+
+```python
+# 创建备份
+POST /api/backup/create
+Headers: Authorization: Bearer <token> (Admin/Publisher)
+Request: {
+  "name": "daily_backup",
+  "include_storage": true
+}
+Response: {
+  "backup_id": "backup_123",
+  "filename": "backup_20260306.tar.gz",
+  "size": 1073741824,
+  "created_at": "2026-03-06T10:00:00Z"
+}
+
+# 列出备份
+GET /api/backup/list
+Headers: Authorization: Bearer <token>
+Response: {
+  "backups": [
+    {
+      "backup_id": "backup_123",
+      "name": "daily_backup",
+      "filename": "backup_20260306.tar.gz",
+      "size": 1073741824,
+      "created_at": "2026-03-06T10:00:00Z"
+    }
+  ]
+}
+
+# 恢复备份
+POST /api/backup/restore
+Headers: Authorization: Bearer <token> (Admin only)
+Request: {
+  "backup_filename": "backup_20260306.tar.gz",
+  "restore_storage": true
+}
+Response: {
+  "message": "Backup restored successfully",
+  "restored_at": "2026-03-06T11:00:00Z"
+}
+
+# 下载备份
+GET /api/backup/{backup_id}/download
+Headers: Authorization: Bearer <token> (Admin/Publisher)
+Response: Binary file stream
+
+# 删除备份
+DELETE /api/backup/{backup_id}
+Headers: Authorization: Bearer <token> (Admin only)
+Response: {"message": "Backup deleted successfully"}
+```
+
+### 6.5 冷备份 API ✅ 新增
+
+```python
+# 创建冷备份
+POST /api/cold-backup/create
+Headers: Authorization: Bearer <token> (Admin only)
+Request: {
+  "name": "monthly_archive",
+  "storage_location": "s3",  # or "local", "azure"
+  "metadata": {
+    "description": "Monthly cold backup for compliance",
+    "retention_years": 7
+  }
+}
+Response: {
+  "backup_id": "cold_backup_456",
+  "name": "monthly_archive",
+  "filename": "cold_backup_20260306.tar.gz",
+  "size": 5368709120,
+  "checksum": "sha256:abc123...",
+  "created_at": "2026-03-06T10:00:00Z"
+}
+
+# 列出冷备份
+GET /api/cold-backup/list
+Headers: Authorization: Bearer <token>
+Response: {
+  "backups": [
+    {
+      "backup_id": "cold_backup_456",
+      "name": "monthly_archive",
+      "filename": "cold_backup_20260306.tar.gz",
+      "size": 5368709120,
+      "storage_location": "s3",
+      "created_at": "2026-03-06T10:00:00Z"
+    }
+  ]
+}
+
+# 上传外部冷备份
+POST /api/cold-backup/upload
+Headers: Authorization: Bearer <token> (Admin only)
+Request: Multipart/form-data
+  - backup_file: (file)
+  - name: "external_backup_20260306"
+  - metadata: JSON string
+Response: {
+  "backup_id": "cold_backup_789",
+  "message": "Cold backup uploaded successfully"
+}
+
+# 从冷备份恢复
+POST /api/cold-backup/restore
+Headers: Authorization: Bearer <token> (Admin only)
+Request: {
+  "backup_id": "cold_backup_456"
+}
+Response: {
+  "message": "Cold backup restored successfully",
+  "restored_at": "2026-03-06T11:00:00Z"
+}
+
+# 删除冷备份
+DELETE /api/cold-backup/{backup_id}
+Headers: Authorization: Bearer <token> (Admin only)
+Response: {"message": "Cold backup deleted successfully"}
+```
+
 ---
 
 ## 7. 发布流程设计
@@ -702,52 +1000,334 @@ def check_download_permission(user: User, release: Release, content_type: Conten
 
 ## 9. Web UI 设计
 
-### 9.1 页面结构
+### 9.1 实际实现的页面 ✅ 已更新
 
-#### 登录页
+#### 登录页 (`login.html`)
 - 用户名/密码输入
 - "记住我"选项
 - 登录按钮
+- 错误提示
+- 响应式设计
 
-#### 发布管理页（Publisher/Admin）
+#### 仪表盘 (`dashboard.html`) ✅ 新增
+- 系统概览统计卡片
+  - 总发布数
+  - 总用户数
+  - 总许可证数
+  - 最近活动
+- 最近发布列表（前5条）
+- 最近下载记录（前10条）
+- 系统健康状态
+  - 数据库状态
+  - 存储空间使用
+  - 服务运行时间
+
+#### 发布管理页 (`releases.html`)
 - 发布列表表格
-  - 资源类型、版本、状态、发布时间
-  - 操作按钮：查看、编辑、删除、发布/归档
+  - 资源类型、版本、状态、发布时间、发布者
+  - 操作按钮：查看、编辑、发布、归档、删除
+- 筛选功能（按类型、状态）
 - "新建发布"按钮
+- 分页和搜索
+- 创建发布模态框
+  - 资源类型选择（BSP/Driver/Examples）
+  - 版本号输入
+  - 描述和更新日志
+  - 文件上传（支持拖拽）
+  - 保存草稿/立即发布
 
-#### 新建发布页
-- 表单字段：
-  - 资源类型（下拉选择：BSP/Driver/Examples）
-  - 版本号
-  - 描述
-  - 更新日志
-- 文件上传区：
-  - 源码文件（zip 或目录）
-  - 二进制文件（zip 或目录）
-  - 文档文件（zip 或目录）
-- 保存草稿 / 立即发布 按钮
+#### 下载中心 (`downloads.html`)
+- 可下载资源列表（根据许可证过滤）
+- 资源类型标签
+- 权限说明（FULL_ACCESS / BINARY_ACCESS）
+- 一键下载按钮
+- 下载历史记录
+- 搜索和筛选
 
-#### 发布详情页
-- 发布信息展示
-- 包列表（带下载链接）
-- 权限视图（预览不同权限级别看到的包）
-
-#### 许可证管理页（Admin）
+#### 许可证管理页 (`licenses.html`) - Admin 专用
 - 许可证列表表格
-  - 许可证 ID、组织、访问级别、资源类型、有效期
-  - 操作按钮：查看、编辑、撤销
+  - 许可证 ID、组织、访问级别、资源类型、有效期、状态
+  - 操作按钮：查看、编辑、延期、撤销
 - "新建许可证"按钮
+- 许可证创建模态框
+  - 组织名称
+  - 访问级别选择
+  - 资源类型多选
+  - 有效期设置
+- 延期功能
 
-#### 客户下载页
-- 发布列表（根据许可证过滤）
-- 下载按钮（根据权限显示可下载的包）
+#### 备份管理页 (`backup.html`) ✅ 新增
+- 备份列表表格
+  - 备份名称、文件名、大小、创建时间、创建者
+  - 操作按钮：下载、恢复、删除
+- "创建备份"按钮
+- 创建备份模态框
+  - 备份名称
+  - 是否包含存储
+- 备份统计信息
+  - 备份总数
+  - 总存储占用
+  - 最近备份时间
 
-### 9.2 UI 框架选择
-推荐使用轻量级方案：
-- **后端**：Flask + Jinja2 模板
-- **前端**：Bootstrap 5 或 Tailwind CSS（通过 CDN 引入）
-- **图标**：FontAwesome 或 Heroicons
-- **文件上传**：Dropzone.js
+#### 冷备份管理页 (`cold_backup.html`) ✅ 新增
+- 冷备份列表表格
+  - 备份名称、文件名、大小、存储位置、创建时间
+  - 操作按钮：下载、恢复、删除
+- "创建冷备份"按钮
+- "上传外部备份"按钮
+- 存储位置配置
+- 冷备份归档策略
+
+#### 审计日志页 (`audit.html`) ✅ 新增
+- 操作日志列表
+  - 时间、用户、操作类型、资源、详情
+- 高级筛选
+  - 时间范围
+  - 用户筛选
+  - 操作类型筛选
+  - 资源类型筛选
+- 日志详情查看
+- 日志导出功能（CSV/Excel）
+- 操作统计图表
+  - 操作趋势
+  - 用户活跃度
+  - 资源访问统计
+
+### 9.2 UI 设计特点
+
+#### 视觉设计
+- **色彩方案**：紫色渐变主题 (#667eea → #764ba2)
+- **卡片式布局**：圆角阴影设计
+- **状态徽章**：彩色标识不同状态（草稿/已发布/已归档）
+- **响应式设计**：适配桌面、平板、手机
+
+#### 交互设计
+- **模态框**：用于创建和编辑操作
+- **实时搜索**：列表页即时筛选
+- **拖拽上传**：文件上传支持拖拽
+- **加载动画**：操作反馈
+- **Toast 通知**：操作成功/失败提示
+
+### 9.3 UI 技术栈
+
+#### 实际使用的技术
+- **后端**：Flask + Jinja2 模板引擎
+- **前端框架**：Bootstrap 5.3
+- **图标库**：Bootstrap Icons
+- **JavaScript**：Vanilla JS（无额外框架依赖）
+- **AJAX**：Fetch API
+- **文件上传**：Dropzone.js 集成
+- **图表**：Chart.js（用于审计统计）
+
+#### 特性
+- **无依赖前端**：不需要 npm/webpack
+- **CDN 加速**：静态资源通过 CDN 加载
+- **客户端存储**：sessionStorage 存储 Token
+- **异步加载**：动态加载内容
+
+---
+
+## 10. 扩展功能 ✅ 新增章节
+
+### 10.1 审计日志系统
+
+#### 功能概述
+记录系统中所有关键操作，提供完整的操作追踪和审计能力。
+
+#### 记录的操作类型
+- **用户操作**
+  - 登录/登出
+  - 密码修改
+  - 用户创建/删除
+- **发布操作**
+  - 创建发布草稿
+  - 上传包文件
+  - 发布版本
+  - 归档版本
+- **许可证操作**
+  - 创建许可证
+  - 撤销许可证
+  - 延期许可证
+- **下载操作**
+  - 下载包文件
+  - 查看发布详情
+- **系统操作**
+  - 数据库备份
+  - 配置变更
+  - 系统启动/停止
+
+#### 审计数据字段
+```python
+{
+    "log_id": "uuid",
+    "user_id": "user_123",
+    "username": "admin",
+    "action": "publish",
+    "resource_type": "BSP",
+    "resource_id": "rel_456",
+    "details": {
+        "version": "v1.0.0",
+        "packages": ["source", "binary", "doc"]
+    },
+    "ip_address": "192.168.1.100",
+    "user_agent": "Mozilla/5.0...",
+    "timestamp": "2026-03-06T10:30:00Z"
+}
+```
+
+#### 查询和导出
+- 按时间范围查询
+- 按用户筛选
+- 按操作类型筛选
+- 按资源类型筛选
+- 导出为 CSV/Excel/JSON
+- 实时统计和图表
+
+### 10.2 备份管理系统
+
+#### 功能概述
+提供完整的数据库和存储备份能力，支持手动和自动备份。
+
+#### 备份类型
+- **完整备份**：数据库 + 存储文件
+- **数据库备份**：仅数据库
+- **增量备份**：仅备份变更部分
+
+#### 备份策略
+```python
+{
+    "backup_name": "daily_backup",
+    "include_storage": True,
+    "retention_days": 30,
+    "schedule": {
+        "type": "cron",
+        "expression": "0 2 * * *"  # 每天凌晨2点
+    }
+}
+```
+
+#### 备份操作
+- 创建备份（手动/自动）
+- 列出备份
+- 下载备份文件
+- 恢复备份
+- 删除旧备份
+- 备份验证（checksum）
+
+#### 备份存储
+- 本地存储
+- S3 云存储
+- Azure Blob Storage
+- Google Cloud Storage
+
+### 10.3 冷备份系统
+
+#### 功能概述
+长期归档备份，用于合规性和灾难恢复。
+
+#### 冷备份特点
+- **长期保存**：保留 7 年或更久
+- **只读存储**：防止修改和删除
+- **离线存储**：可存储到离线介质
+- **加密存储**：支持加密归档
+
+#### 冷备份流程
+```
+1. 创建备份快照
+2. 压缩和加密
+3. 计算校验和
+4. 上传到长期存储（S3 Glacier/Azure Archive）
+5. 记录元数据
+```
+
+#### 冷备份操作
+- 创建冷备份
+- 上传外部备份
+- 列出冷备份
+- 从冷备份恢复
+- 删除冷备份（需要特殊权限）
+- 验证备份完整性
+
+### 10.4 自动化测试系统
+
+#### 功能概述
+在发布前自动运行测试套件，确保发布的版本质量。
+
+#### 测试级别
+- **Critical（关键测试）**
+  - 测试内容：核心功能验证
+  - 耗时：约 30 秒
+  - 用途：日常发布
+  - 测试用例：约 10 个
+
+- **All（完整测试）**
+  - 测试内容：所有测试
+  - 耗时：约 2 分钟
+  - 用途：重要版本
+  - 测试用例：约 54 个
+
+- **API（API 测试）**
+  - 测试内容：API 端点
+  - 耗时：约 1 分钟
+  - 用途：API 验证
+  - 测试用例：约 31 个
+
+- **Integration（集成测试）**
+  - 测试内容：端到端流程
+  - 耗时：约 1 分钟
+  - 用途：流程验证
+  - 测试用例：约 15 个
+
+#### 测试流程
+```mermaid
+graph LR
+    A[发布请求] --> B{启用测试?}
+    B -->|否| C[直接发布]
+    B -->|是| D[运行测试]
+    D --> E{测试通过?}
+    E -->|是| C
+    E -->|否| F[阻止发布]
+    F --> G[返回错误]
+```
+
+#### 测试结果
+```python
+{
+    "passed": True,
+    "total_tests": 10,
+    "passed_tests": 10,
+    "failed_tests": 0,
+    "skipped_tests": 0,
+    "duration": 28.45,
+    "errors": []
+}
+```
+
+#### CLI 集成
+```bash
+# 发布时运行测试
+release-portal publish \
+  --type bsp \
+  --version v1.0.0 \
+  --test \
+  --test-level critical
+
+# 发布时跳过测试（开发环境）
+release-portal publish \
+  --type bsp \
+  --version v1.0.0 \
+  --skip-test
+```
+
+#### API 集成
+```python
+POST /api/releases/{release_id}/publish
+Headers: Authorization: Bearer <token>
+Request: {
+    "run_tests": True,
+    "test_level": "critical"
+}
+```
 
 ---
 
@@ -858,7 +1438,7 @@ services:
 
 ## 12. 实施计划
 
-### Phase 1：核心功能开发（4 周）
+### Phase 1：核心功能开发（4 周）✅ 已完成
 - Week 1-2：领域层和基础设施层
   - 实现 User, Role, License, Release 实体
   - 实现 SQLite 仓储
@@ -870,7 +1450,7 @@ services:
   - 实现认证、发布、下载命令
   - 测试完整发布流程
 
-### Phase 2：Web 服务开发（3 周）
+### Phase 2：Web 服务开发（3 周）✅ 已完成
 - Week 5：Flask API
   - 实现 REST API 端点
   - 权限中间件
@@ -881,29 +1461,54 @@ services:
   - 端到端测试
   - 性能测试
 
-### Phase 3：文档和部署（2 周）
-- Week 8：文档
+### Phase 3：扩展功能开发（3 周）✅ 已完成
+- Week 8：审计和备份功能
+  - 实现审计日志系统
+  - 实现备份管理
+  - 实现冷备份系统
+- Week 9：自动化测试和 TUI
+  - 实现发布前自动化测试
+  - 实现终端用户界面（TUI）
+- Week 10：完整测试和优化
+  - 端到端测试
+  - 性能优化
+  - 安全加固
+
+### Phase 4：文档和部署（2 周）✅ 已完成
+- Week 11：文档编写
   - 用户手册
   - API 文档
-  - 部署指南
-- Week 9：部署和上线
+  - 部署指南（DEPLOYMENT_GUIDE.md）
+  - 快速开始（QUICKSTART_DEPLOYMENT.md）
+  - Docker 部署（DOCKER_DEPLOYMENT.md）
+  - 部署检查清单（DEPLOYMENT_CHECKLIST.md）
+- Week 12：部署和上线
   - 生产环境部署
   - 监控和日志
   - 用户培训
+
+**当前状态**: ✅ 所有核心功能和扩展功能已完成（2026-03-06）
 
 ---
 
 ## 13. 扩展性考虑
 
 ### 13.1 未来可能的功能
-1. **多语言支持**：i18n 国际化
-2. **通知系统**：发布通知、许可证过期提醒
-3. **审计日志**：记录所有发布和下载操作
-4. **版本比较**：可视化比较不同版本的差异
-5. **自动化测试**：发布前自动运行测试套件
-6. **CI/CD 集成**：与 Jenkins/GitLab CI 集成
-7. **包签名**：GPG 签名验证
-8. **多租户**：支持多个组织独立管理
+1. **多语言支持** - i18n 国际化
+2. **通知系统** - 发布通知、许可证过期提醒
+3. ~~审计日志~~ ✅ **已完成**
+4. 版本比较 - 可视化比较不同版本的差异
+5. ~~自动化测试~~ ✅ **已完成**
+6. CI/CD 集成 - 与 Jenkins/GitLab CI 集成
+7. 包签名 - GPG 签名验证
+8. 多租户 - 支持多个组织独立管理
+9. ~~备份功能~~ ✅ **已完成**
+10. 实时监控 - Prometheus/Grafana 集成
+11. API 限流 - 防止滥用
+12. 高可用部署 - 集群部署、负载均衡
+13. 消息队列 - 异步任务处理
+14. 全文搜索 - ElasticSearch 集成
+15. 移动端 APP - iOS/Android 客户端
 
 ### 13.2 性能优化
 1. **缓存**：使用 Redis 缓存许可证和发布信息
@@ -941,13 +1546,35 @@ services:
 ✅ **多类型资源发布**（BSP、Driver、Examples）
 ✅ **分类打包**（Source、Binary、Doc）
 ✅ **混合鉴权**（角色 + 许可证）
-✅ **双发布渠道**（CLI + Web）
+✅ **多发布渠道**（CLI + Web + TUI）
 ✅ **权限分级下载**（FULL_ACCESS, BINARY_ACCESS）
+✅ **审计日志系统**（完整的操作追踪）
+✅ **备份管理**（手动 + 自动备份）
+✅ **冷备份系统**（长期归档）
+✅ **自动化测试**（发布前质量保证）
 
 系统采用分层架构，各层职责清晰，易于测试和维护。通过复用 Binary Manager V2 的打包和存储能力，减少了重复开发，提高了开发效率。
 
+**核心优势**:
+- 🎯 **架构清晰** - 洋葱架构，依赖方向正确
+- 🔒 **安全可靠** - JWT 认证 + 许可证控制
+- 📊 **可追溯性** - 完整的审计日志
+- 💾 **数据安全** - 多重备份策略
+- ✅ **质量保证** - 自动化测试集成
+- 🚀 **易于部署** - 完善的部署指南和脚本
+
 ---
 
-**文档版本**：v1.0  
+**文档版本**：v2.0  
 **创建日期**：2026-03-01  
-**最后更新**：2026-03-01
+**最后更新**：2026-03-06  
+**更新内容**：
+- 新增审计日志系统设计
+- 新增备份管理系统设计
+- 新增冷备份系统设计
+- 新增自动化测试系统设计
+- 更新架构图和目录结构
+- 更新 API 端点列表
+- 更新 Web UI 页面列表
+- 更新实施计划状态
+- 更新扩展性考虑

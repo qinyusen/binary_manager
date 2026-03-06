@@ -1,9 +1,14 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, TYPE_CHECKING
 from ..domain.entities.release import Release
+from ..domain.entities.audit_log import AuditAction
 from ..domain.value_objects import ResourceType, ContentType
 from ..domain.repositories import ReleaseRepository
 from ..domain.services import IStorageService
 from ..infrastructure.auth import UUIDGenerator
+from .test_runner import PrePublishValidator, TestResult
+
+if TYPE_CHECKING:
+    from .audit_service import AuditService
 
 
 class ReleaseService:
@@ -13,11 +18,21 @@ class ReleaseService:
         self,
         release_repository: ReleaseRepository,
         storage_service: IStorageService,
-        authorization_service=None
+        authorization_service=None,
+        audit_service: Optional['AuditService'] = None,
+        enable_pre_publish_tests: bool = False,
+        test_level: str = "critical"
     ):
         self._release_repository = release_repository
         self._storage_service = storage_service
         self._authorization_service = authorization_service
+        self._audit_service = audit_service
+        self._enable_pre_publish_tests = enable_pre_publish_tests
+        self._test_level = test_level
+        self._test_validator: Optional[PrePublishValidator] = None
+        
+        if enable_pre_publish_tests:
+            self._test_validator = PrePublishValidator()
     
     def create_draft(
         self,
@@ -51,6 +66,22 @@ class ReleaseService:
         )
         
         self._release_repository.save(release)
+        
+        # 记录审计日志
+        if self._audit_service:
+            self._audit_service.log_action(
+                action=AuditAction.CREATE,
+                user_id=publisher_id,
+                username='',  # 可从 user_repo 获取
+                role='Publisher',  # 可从 user 获取
+                resource_type=str(resource_type.value),
+                resource_id=release_id,
+                details={
+                    'version': version,
+                    'description': description
+                }
+            )
+        
         return release
     
     def add_package(
@@ -97,17 +128,43 @@ class ReleaseService:
         release.add_package(content_type, package_id)
         self._release_repository.save(release)
         
+        # 记录审计日志
+        if self._audit_service:
+            self._audit_service.log_action(
+                action=AuditAction.UPLOAD,
+                user_id=user_id or 'system',
+                username='',
+                role='Publisher',
+                resource_type=str(release.resource_type.value),
+                resource_id=release_id,
+                details={
+                    'content_type': str(content_type.value),
+                    'package_id': package_id
+                }
+            )
+        
         return package_id
     
-    def publish_release(self, release_id: str, user_id: Optional[str] = None) -> Release:
+    def publish_release(
+        self, 
+        release_id: str, 
+        user_id: Optional[str] = None,
+        run_tests: Optional[bool] = None,
+        test_level: Optional[str] = None
+    ) -> Release:
         """发布版本
         
         Args:
             release_id: 发布ID
             user_id: 用户ID（用于权限验证，可选）
+            run_tests: 是否运行测试（None表示使用默认配置）
+            test_level: 测试级别（critical/all/api/integration）
             
         Returns:
             发布的 Release 对象
+            
+        Raises:
+            ValueError: 发布失败或测试未通过
         """
         release = self._release_repository.find_by_id(release_id)
         if not release:
@@ -120,8 +177,48 @@ class ReleaseService:
         if not release.has_package(ContentType.BINARY):
             raise ValueError("Release must have at least a binary package")
         
+        # 发布前测试验证
+        should_run_tests = run_tests if run_tests is not None else self._enable_pre_publish_tests
+        if should_run_tests and self._test_validator:
+            level = test_level or self._test_level
+            print(f"\n🧪 发布前测试验证（级别: {level}）...")
+            
+            test_result = self._test_validator.validate_before_publish(
+                release_id=release_id,
+                test_level=level
+            )
+            
+            if not test_result.passed:
+                raise ValueError(
+                    f"发布前测试失败，无法发布版本。\n"
+                    f"测试结果: {test_result.passed_tests}/{test_result.total_tests} 通过\n"
+                    f"失败: {test_result.failed_tests}\n"
+                    f"错误: {'; '.join(test_result.errors[:3])}"
+                )
+            
+            print(f"✅ 测试验证通过，继续发布...")
+        
+        old_status = release.status.value
         release.publish()
         self._release_repository.save(release)
+        
+        # 记录审计日志
+        if self._audit_service:
+            self._audit_service.log_action(
+                action=AuditAction.PUBLISH,
+                user_id=user_id or 'system',
+                username='',
+                role='Publisher',
+                resource_type=str(release.resource_type.value),
+                resource_id=release_id,
+                details={
+                    'version': release.version,
+                    'old_status': old_status,
+                    'new_status': release.status.value,
+                    'tests_run': should_run_tests
+                }
+            )
+        
         return release
     
     def archive_release(self, release_id: str, user_id: Optional[str] = None) -> Release:
@@ -142,8 +239,26 @@ class ReleaseService:
             if not self._authorization_service.can_publish(user_id, release.resource_type):
                 raise ValueError(f"User does not have permission to publish {release.resource_type.value}")
         
+        old_status = release.status.value
         release.archive()
         self._release_repository.save(release)
+        
+        # 记录审计日志
+        if self._audit_service:
+            self._audit_service.log_action(
+                action=AuditAction.ARCHIVE,
+                user_id=user_id or 'system',
+                username='',
+                role='Publisher',
+                resource_type=str(release.resource_type.value),
+                resource_id=release_id,
+                details={
+                    'version': release.version,
+                    'old_status': old_status,
+                    'new_status': release.status.value
+                }
+            )
+        
         return release
     
     def get_release(self, release_id: str) -> Optional[Release]:
