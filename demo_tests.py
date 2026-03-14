@@ -23,40 +23,40 @@ def print_section(title):
 def demo_test_structure():
     """演示测试结构"""
     print_section("📁 测试目录结构")
-    
+
     import os
-    
+
     def print_tree(directory, prefix="", max_depth=3, current_depth=0):
         """打印目录树"""
         if current_depth >= max_depth:
             return
-        
+
         try:
             entries = sorted(os.listdir(directory))
-        except:
+        except OSError:
             return
-        
+
         for i, entry in enumerate(entries):
-            if entry.startswith('.') or entry == '__pycache__':
+            if entry.startswith(".") or entry == "__pycache__":
                 continue
-            
+
             path = os.path.join(directory, entry)
             is_last = i == len(entries) - 1
             connector = "└── " if is_last else "├── "
-            
+
             print(f"{prefix}{connector}{entry}")
-            
+
             if os.path.isdir(path) and current_depth < max_depth - 1:
                 extension = "    " if is_last else "│   "
                 print_tree(path, prefix + extension, max_depth, current_depth + 1)
-    
+
     print_tree("tests")
 
 
 def demo_fixtures():
     """演示 fixtures"""
     print_section("🧪 可用的 Fixtures")
-    
+
     fixtures_info = [
         ("test_db_path", "创建测试数据库路径"),
         ("db_initializer", "初始化测试数据库"),
@@ -69,7 +69,7 @@ def demo_fixtures():
         ("api_client", "API 客户端包装类"),
         ("authenticated_api_client", "已认证的 API 客户端"),
     ]
-    
+
     for fixture_name, description in fixtures_info:
         print(f"  • {fixture_name:30s} - {description}")
 
@@ -77,13 +77,13 @@ def demo_fixtures():
 def demo_test_utils():
     """演示测试工具函数"""
     print_section("🛠️ 测试工具函数")
-    
+
     from tests.fixtures.test_utils import (
         create_test_bsp_package,
         cleanup_temp_directory,
-        APIClient
+        APIClient,
     )
-    
+
     print("\n1. 创建测试 BSP 包:")
     print("   ```python")
     print("   package_path, temp_dir = create_test_bsp_package(")
@@ -91,12 +91,12 @@ def demo_test_utils():
     print("       board_name='rdk_x3'")
     print("   )")
     print("   ```")
-    
+
     print("\n2. 清理临时目录:")
     print("   ```python")
     print("   cleanup_temp_directory(temp_dir)")
     print("   ```")
-    
+
     print("\n3. 使用 API 客户端:")
     print("   ```python")
     print("   api = APIClient(client, token=auth_token)")
@@ -107,7 +107,7 @@ def demo_test_utils():
 def demo_test_example():
     """演示测试示例"""
     print_section("📝 测试示例")
-    
+
     print("\n1. API 测试示例:")
     print("   ```python")
     print("   def test_login_success(client, test_users):")
@@ -120,7 +120,7 @@ def demo_test_example():
     print("       data = response.get_json()")
     print("       assert 'token' in data")
     print("   ```")
-    
+
     print("\n2. 端到端测试示例:")
     print("   ```python")
     print("   def test_complete_release_workflow(client, auth_tokens):")
@@ -140,7 +140,7 @@ def demo_test_example():
 def demo_running_tests():
     """演示运行测试"""
     print_section("🚀 运行测试")
-    
+
     print("\n使用 pytest 直接运行:")
     print("  ```bash")
     print("  # 运行所有测试")
@@ -152,7 +152,7 @@ def demo_running_tests():
     print("  # 运行带覆盖率的测试")
     print("  pytest --cov=release_portal --cov-report=html")
     print("  ```")
-    
+
     print("\n使用测试脚本:")
     print("  ```bash")
     print("  ./run_tests.sh all         # 运行所有测试")
@@ -165,7 +165,7 @@ def demo_running_tests():
 def demo_test_coverage():
     """演示测试覆盖范围"""
     print_section("📊 测试覆盖范围")
-    
+
     coverage = [
         ("认证 API", "10", "test_auth_api.py"),
         ("发布 API", "10", "test_releases_api.py"),
@@ -173,15 +173,15 @@ def demo_test_coverage():
         ("许可证 API", "6", "test_downloads_licenses_api.py"),
         ("端到端工作流", "15+", "test_end_to_end.py"),
     ]
-    
+
     print("\n模块                    测试数量    文件")
     print("-" * 70)
     for module, count, file in coverage:
         print(f"{module:20s}      {count:>5s}     {file}")
-    
+
     print("-" * 70)
     print(f"{'总计':20s}      {'46+':>5s}")
-    
+
     print("\n覆盖的功能:")
     print("  ✓ 认证流程（登录、登出、注册、token 验证）")
     print("  ✓ 发布管理（创建、发布、归档、筛选）")
@@ -198,30 +198,30 @@ def main():
     print("\n" + "🧪" * 35)
     print("  Release Portal V3 - 集成测试套件演示")
     print("🧪" * 35)
-    
+
     demo_test_structure()
     demo_fixtures()
     demo_test_utils()
     demo_test_example()
     demo_running_tests()
     demo_test_coverage()
-    
+
     print_section("📚 更多信息")
-    
+
     print("\n查看详细文档:")
     print("  • tests/README.md - 测试指南")
     print("  • INTEGRATION_TESTS_SUMMARY.md - 测试总结")
     print("  • pytest.ini - pytest 配置")
-    
+
     print("\n快速开始:")
     print("  1. 安装依赖: pip3 install -r requirements-test.txt")
     print("  2. 运行测试: pytest")
     print("  3. 查看覆盖率: open htmlcov/index.html")
-    
+
     print("\n" + "=" * 70)
     print("  Happy Testing! 🎉")
     print("=" * 70 + "\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
