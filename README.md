@@ -1,364 +1,227 @@
-# Binary Manager
+# Release Platform - 文档中心
 
-通过JSON配置文件管理二进制文件的发布和下载系统。
-
-## 🎯 项目概述
-
-Binary Manager是一个基于洋葱架构的二进制文件发布和下载管理系统，提供完整的包管理功能。
-
-## ✨ 核心特性
-
-### 🏗️ 洋葱架构设计
-- **Domain层（领域层）** - 零外部依赖，纯粹的业务逻辑
-- **Infrastructure层（基础设施层）** - 存储、Git、数据库实现
-- **Application层（应用层）** - 业务服务协调
-- **Presentation层（表示层）** - CLI命令行工具
-
-### 📦 完整功能
-- ✅ 发布管理（本地存储/S3云存储）
-- ✅ 下载和安装
-- ✅ 分组管理（Group）
-- ✅ Git集成（commit追踪、branch、tag）
-- ✅ SQLite数据库持久化
-- ✅ SHA256哈希验证
-- ✅ 依赖管理
-
-### 🚀 高性能
-- 依赖精简（总大小仅~6MB）
-- 使用urllib3替代boto3实现S3支持
-- Domain层完全零外部依赖
-
-## 📁 项目结构
-
-```
-binary_manager_v2/
-├── domain/                  # 领域层（零外部依赖）
-│   ├── entities/           # 实体（Package, Version, Group等）
-│   ├── value_objects/      # 值对象（PackageName, Hash, GitInfo等）
-│   ├── services/           # 领域服务（FileScanner, HashCalculator等）
-│   └── repositories/       # 仓储接口
-├── infrastructure/         # 基础设施层
-│   ├── storage/           # 存储服务（LocalStorage, S3Storage）
-│   ├── git/              # Git服务
-│   └── database/         # 数据库仓储实现（SQLite）
-├── application/           # 应用层
-│   ├── publisher_service.py    # 发布服务
-│   ├── downloader_service.py   # 下载服务
-│   └── group_service.py        # 分组服务
-├── cli/                  # 表示层
-│   └── main.py          # CLI工具
-├── shared/              # 共享工具
-│   ├── logger.py
-│   ├── progress.py
-│   └── config.py
-└── config/              # 配置文件
-    └── database_schema.sql
-```
-
-## 🔧 快速开始
-
-### 安装依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-### 交互式发布（推荐新手）
-
-使用友好的交互式工具：
-
-```bash
-python3 publish_tool.py
-```
-
-按照提示完成发布，支持：
-- 步骤化引导
-- 智能默认值
-- 实时验证
-- 彩色输出
-
-### 快速发布
-
-```bash
-python3 publish_tool.py --quick ./my_project my_app
-```
-
-### 命令行发布
-
-#### 发布到本地存储
-
-```bash
-python3 -m binary_manager_v2.cli.main publish \
-  --source ./my_project \
-  --package-name my_app \
-  --version 1.0.0 \
-  --description "My Application"
-```
-
-#### 发布到S3云存储
-
-```bash
-python3 -m binary_manager_v2.cli.main publish \
-  --source ./my_project \
-  --package-name my_app \
-  --version 1.0.0 \
-  --s3-bucket my-bucket
-```
-
-### 下载包
-
-#### 通过配置文件下载
-
-```bash
-python3 -m binary_manager_v2.cli.main download \
-  --config ./releases/my_app_v1.0.0.json \
-  --output ./downloads
-```
-
-#### 通过名称和版本下载
-
-```bash
-python3 -m binary_manager_v2.cli.main download \
-  --package-name my_app \
-  --version 1.0.0 \
-  --output ./downloads
-```
-
-#### 下载整个分组
-
-```bash
-python3 -m binary_manager_v2.cli.main download \
-  --group-id 1 \
-  --output ./downloads
-```
-
-### 分组管理
-
-#### 创建分组
-
-```bash
-python3 -m binary_manager_v2.cli.main group create \
-  --group-name dev_environment \
-  --version 1.0.0 \
-  --packages backend_api:1.0.0 frontend_web:2.0.0 \
-  --description "Development Environment"
-```
-
-#### 列出所有分组
-
-```bash
-python3 -m binary_manager_v2.cli.main group list
-```
-
-#### 导出分组配置
-
-```bash
-python3 -m binary_manager_v2.cli.main group export \
-  --group-id 1 \
-  --output ./groups
-```
-
-#### 导入分组配置
-
-```bash
-python3 -m binary_manager_v2.cli.main group import \
-  --config ./groups/dev_environment_v1.0.0.json
-```
-
-### 列出和管理
-
-#### 列出所有包
-
-```bash
-python3 -m binary_manager_v2.cli.main list
-```
-
-#### 按名称过滤
-
-```bash
-python3 -m binary_manager_v2.cli.main list --package-name my_app
-```
-
-## 🧪 测试
-
-运行完整测试套件：
-
-```bash
-python3 test_v2_complete.py
-```
-
-测试覆盖：
-- ✅ Domain Layer（领域层测试）
-- ✅ Infrastructure Layer（基础设施层测试）
-- ✅ Database Layer（数据库层测试）
-- ✅ Application Layer（应用层测试）
-- ✅ CLI（命令行测试）
-- ✅ Integration（集成测试）
-- ✅ Edge Cases（边界情况测试）
-
-## 📚 示例程序
-
-项目包含完整的示例程序，展示Binary Manager的各种使用场景：
-
-### 1. 简单应用（Simple App）
-一个基本的计算器应用，适合入门学习：
-
-```bash
-# 发布示例应用
-python3 -m binary_manager_v2.cli.main publish \
-    --source ./examples/simple_app \
-    --package-name simple_app \
-    --version 1.0.0
-
-# 下载并运行
-python3 -m binary_manager_v2.cli.main download \
-    --package-name simple_app \
-    --version 1.0.0 \
-    --output ./installed_apps
-
-cd installed_apps/simple_app_v1.0.0
-python3 main.py add 10 5
-```
-
-### 2. Web应用（Web App）
-Web服务器应用示例：
-
-```bash
-python3 -m binary_manager_v2.cli.main publish \
-    --source ./examples/web_app \
-    --package-name web_app \
-    --version 1.0.0
-
-# 下载后运行
-cd installed_apps/web_app_v1.0.0
-python3 server.py
-# 访问 http://localhost:8080
-```
-
-### 3. 命令行工具（CLI Tool）
-功能丰富的CLI工具示例：
-
-```bash
-python3 -m binary_manager_v2.cli.main publish \
-    --source ./examples/cli_tool \
-    --package-name cli_tool \
-    --version 1.0.0
-```
-
-### 4. 嵌入式Linux BSP（BSP Package）
-完整的嵌入式Linux板级支持包示例：
-
-```bash
-# 发布BSP包
-python3 -m binary_manager_v2.cli.main publish \
-    --source ./examples/bsp_package \
-    --package-name rv_board_bsp \
-    --version 1.0.0 \
-    --description "RV-Board-Dev1 Embedded Linux BSP"
-
-# 下载BSP
-python3 -m binary_manager_v2.cli.main download \
-    --package-name rv_board_bsp \
-    --version 1.0.0 \
-    --output ./installed_bsps
-
-# 查看BSP信息
-cat installed_bsps/rv_board_bsp_v1.0.0/board_info.json
-
-# 烧写到SD卡
-cd installed_bsps/rv_board_bsp_v1.0.0
-sudo ./scripts/flash.sh --device /dev/sdX --media sd
-```
-
-### 查看所有示例
-
-```bash
-# 查看示例目录
-ls examples/
-
-# 阅读示例文档
-cat examples/README.md
-cat examples/BSP_README.md
-
-# 运行API使用示例
-python3 examples_usage.py
-```
-
-详细文档：
-- [示例程序总览](examples/README.md)
-- [BSP使用指南](examples/BSP_README.md)
-- [API使用示例](examples_usage.py)
-
-## 📊 依赖
-
-```
-urllib3>=2.0.0    # HTTP和S3支持（~1MB）
-requests>=2.31.0  # HTTP下载
-```
-
-**总依赖大小**: ~6MB
-
-## 📚 详细文档
+## 📚 文档导航
 
 ### 核心文档
-- [BINARY_MANAGER_V2.md](BINARY_MANAGER_V2.md) - 完整架构文档
-- [V2_QUICKSTART.md](V2_QUICKSTART.md) - 5分钟快速入门
-- [PROJECT_FILES.md](PROJECT_FILES.md) - 项目文件说明
-- [CHANGELOG.md](CHANGELOG.md) - 变更日志
 
-### 使用指南
-- [PUBLISH_TOOL_GUIDE.md](PUBLISH_TOOL_GUIDE.md) - 交互式发布工具指南
-- [SPLIT_PACKAGES_GUIDE.md](SPLIT_PACKAGES_GUIDE.md) - 分包发布指南
-- [examples/README.md](examples/README.md) - 示例程序总览
-- [examples/BSP_README.md](examples/BSP_README.md) - BSP使用指南
+| 文档 | 描述 | 位置 |
+|------|------|------|
+| [项目总览](docs_archive/core_docs/README.md) | Binary Manager 项目概览和快速开始指南 | 核心文档 |
+| [使用手册](docs_archive/core_docs/USER_MANUAL.md) | Release Portal V3 完整使用手册 | 核心文档 |
+| [快速入门](docs_archive/core_docs/QUICK_START.md) | 5分钟快速上手指南 | 核心文档 |
+| [变更日志](docs_archive/core_docs/CHANGELOG.md) | 版本变更记录 | 核心文档 |
+| [系统总览](docs_archive/core_docs/RELEASE_SYSTEM_README.md) | 地瓜机器人发布系统总览 | 核心文档 |
 
-### 代码示例
-- [examples_usage.py](examples_usage.py) - API使用示例
-- [examples_split_packages.py](examples_split_packages.py) - 分包发布示例
-- [publish_tool.py](publish_tool.py) - 交互式发布工具
+### 开发文档
 
-## 🎯 使用场景
+| 文档 | 描述 | 位置 |
+|------|------|------|
+| [自动化测试完成](docs_archive/development_docs/AUTO_TESTS_COMPLETE.md) | 自动化测试功能实现总结 | 开发文档 |
+| [自动化测试特性](docs_archive/development_docs/AUTO_TESTS_FEATURE.md) | 自动化测试功能详细说明 | 开发文档 |
+| [备份功能完成](docs_archive/development_docs/BACKUP_FEATURE_COMPLETE.md) | 备份功能实现总结 | 开发文档 |
+| [备份功能文档](docs_archive/development_docs/BACKUP_FEATURE_DOCUMENTATION.md) | 备份功能完整文档 | 开发文档 |
+| [备份解决方案](docs_archive/development_docs/BACKUP_SOLUTIONS_SUMMARY.md) | 备份解决方案总结 | 开发文档 |
+| [冷备份功能](docs_archive/development_docs/COLD_BACKUP_FEATURE_COMPLETE.md) | 冷备份功能实现 | 开发文档 |
+| [代码改进总结](docs_archive/development_docs/CODE_IMPROVEMENTS_SUMMARY.md) | 代码改进和优化总结 | 开发文档 |
+| [代码审查](docs_archive/development_docs/CODE_REVIEW_RELEASE_DOWNLOAD_SERVER.md) | 代码审查报告 | 开发文档 |
+| [集成测试总结](docs_archive/development_docs/INTEGRATION_TESTS_SUMMARY.md) | 集成测试总结 | 开发文档 |
+| [Phase2集成测试](docs_archive/development_docs/PHASE2_INTEGRATION_TESTS_COMPLETE.md) | Phase2阶段集成测试 | 开发文档 |
+| [Phase2总结](docs_archive/development_docs/PHASE2_SUMMARY.md) | Phase2开发总结 | 开发文档 |
+| [TDD重构总结](docs_archive/development_docs/TDD_REFACTORING_SUMMARY.md) | 测试驱动开发重构总结 | 开发文档 |
 
-Binary Manager适用于以下场景：
+### 部署文档
 
-- ✅ 需要管理多个二进制包的版本
-- ✅ 需要追踪Git commit信息
-- ✅ 需要管理包之间的依赖关系
-- ✅ 需要云存储（S3）支持
-- ✅ 需要分组部署多个相关包
-- ✅ 需要SHA256哈希验证确保完整性
+| 文档 | 描述 | 位置 |
+|------|------|------|
+| [部署指南](docs_archive/DEPLOYMENT_GUIDE.md) | Release Portal V3 完整部署指南 | 部署文档 |
+| [部署检查清单](docs_archive/DEPLOYMENT_CHECKLIST.md) | 部署前检查清单 | 部署文档 |
+| [Docker部署](docs_archive/DOCKERDOCKER_DEPLOYMENT.md) | Docker容器化部署指南 | 部署文档 |
+| [快速部署](docs_archive/deployment_docs/QUICKSTART_DEPLOYMENT.md) | 快速部署指南 | 部署文档 |
 
-## 🔑 核心优势
+### 设计文档
 
-### 1. 洋葱架构
-- 清晰的层次分离
-- Domain层零外部依赖
-- 易于测试和维护
+| 文档 | 描述 | 位置 |
+|------|------|------|
+| [解耦设计](docs_archive/DECOUPLING_DESIGN.md) | 账号系统与存储系统解耦设计 | 设计文档 |
+| [实现总结](docs_archive/IMPLEMENTATION_SUMMARY.md) | Release Portal V3 实施总结 | 设计文档 |
+| [Web UI页面总结](docs_archive/WEB_UI_PAGES_SUMMARY.md) | Web用户界面页面总结 | 设计文档 |
 
-### 2. 完整功能
-- Git集成自动提取commit信息
-- 数据库持久化存储
-- 分组管理批量部署
-- S3云存储支持
+### Binary Manager V2 文档
 
-### 3. 高性能
-- 精简依赖（仅~6MB）
-- 使用urllib3替代boto3
-- 纯Python标准库的Domain层
+| 文档 | 描述 | 位置 |
+|------|------|------|
+| [Binary Manager V2](docs_archive/binary_manager_docs/BINARY_MANAGER_V2.md) | Binary Manager V2 完整文档 | BM V2文档 |
+| [V2快速入门](docs_archive/binary_manager_docs/V2_QUICKSTART.md) | Binary Manager V2 快速入门 | BM V2文档 |
+| [项目文件说明](docs_archive/binary_manager_docs/PROJECT_FILES.md) | 项目文件结构说明 | BM V2文档 |
+| [发布工具指南](docs_archive/binary_manager_docs/PUBLISH_TOOL_GUIDE.md) | 交互式发布工具指南 | BM V2文档 |
+| [分包发布指南](docs_archive/binary_manager_docs/SPLIT_PACKAGES_GUIDE.md) | 分包发布指南 | BM V2文档 |
+| [快速参考](docs_archive/binary_manager_docs/QUICK_REFERENCE.md) | 命令和API快速参考 | BM V2文档 |
+| [设计文档审查](docs_archive/binary_manager_docs/DESIGN_DOC_REVIEW.md) | 设计文档审查报告 | BM V2文档 |
+| [设计更新总结](docs_archive/binary_manager_docs/DESIGN_UPDATE_SUMMARY.md) | 设计更新总结 | BM V2文档 |
+| [系统设计](docs_archive/binary_manager_docs/design.md) | 系统架构设计文档 | BM V2文档 |
+| [变更日志](docs_archive/binary_manager_docs/CHANGELOG.md) | Binary Manager V2 变更日志 | BM V2文档 |
 
-### 4. 易用性
-- 简单的CLI命令
-- JSON配置文件
-- 完整的测试覆盖
+### 示例文档
 
-## 📝 许可
-
-MIT License
-
-## 🤝 贡献
-
-欢迎贡献！请查看项目文档了解详细信息。
+| 文档 | 描述 | 位置 |
+|------|------|------|
+| [示例总览](examples/README.md) | 示例程序总览 | examples/ |
+| [BSP使用指南](examples/BSP_README.md) | 嵌入式Linux BSP使用指南 | examples/ |
+| [BSP包文档](examples/bsp_package/README.md) | BSP包详细说明 | examples/bsp_package/ |
+| [BSP文档](examples/bsp_package/docs/README.md) | BSP包文档 | examples/bsp_package/docs/ |
+| [BSP Bootloader](examples/bsp_package/bootloader/README.md) | Bootloader文档 | examples/bsp_package/bootloader/ |
+| [BSP Kernel](examples/bsp_package/kernel/BSPKernel.md) | Kernel文档 | examples/bsp_package/kernel/ |
+| [简单应用](examples/simple_app/README.md) | 简单计算器应用示例 | examples/simple_app/ |
+| [Web应用](examples/web_app/README.md) | Web服务器应用示例 | examples/web_app/ |
+| [CLI工具](examples/cli_tool/README.md) | 命令行工具示例 | examples/cli_tool/ |
 
 ---
 
-**GitHub**: https://github.com/qinyusen/binary_manager
+## 🚀 快速开始
+
+### 1. 新手入门
+- 阅读 [快速入门](docs_archive/core_docs/QUICK_START.md) - 5分钟上手
+- 参考 [使用手册](docs_archive/core_docs/USER_MANUAL.md) - 详细使用方法
+
+### 2. 开发者
+- 查看 [Binary Manager V2文档](doc/BINARY_MANAGER_V2.md) - 了解架构
+- 阅读 [V2快速入门](doc/V2_QUICKSTART.md) - 快速开始开发
+- 参考 [解耦设计](docs_archive/DECOUPLING_DESIGN.md) - 系统架构
+
+### 3. 部署管理员
+- 按照 [部署指南](docs_archive/DEPLOYMENT_GUIDE.md) - 完整部署流程
+- 检查 [部署检查清单](docs_archive/DEPLOYMENT_CHECKLIST.md) - 部署前检查
+
+### 4. 示例学习
+- 浏览 [示例总览](examples/README.md) - 所有示例
+- 运行 [BSP示例](examples/BSP_README.md) - 嵌入式Linux示例
+
+---
+
+## 📁 文档结构
+
+```
+release_system/
+├── docs_archive/              # 归档文档
+│   ├── core_docs/            # 核心文档
+│   │   ├── README.md         # 项目总览
+│   │   ├── USER_MANUAL.md    # 使用手册
+│   │   ├── QUICK_START.md    # 快速入门
+│   │   ├── CHANGELOG.md      # 变更日志
+│   │   └── RELEASE_SYSTEM_README.md
+│   ├── development_docs/     # 开发文档
+│   │   ├── AUTO_TESTS_*.md   # 自动化测试
+│   │   ├── BACKUP_*.md       # 备份功能
+│   │   ├── CODE_*.md         # 代码相关
+│   │   └── INTEGRATION_*.md  # 集成测试
+│   ├── deployment_docs/      # 部署文档
+│   ├── binary_manager_docs/  # Binary Manager V2 文档
+│   │   ├── BINARY_MANAGER_V2.md
+│   │   ├── V2_QUICKSTART.md
+│   │   ├── PROJECT_FILES.md
+│   │   ├── PUBLISH_TOOL_GUIDE.md
+│   │   ├── SPLIT_PACKAGES_GUIDE.md
+│   │   ├── QUICK_REFERENCE.md
+│   │   ├── DESIGN_DOC_REVIEW.md
+│   │   ├── DESIGN_UPDATE_SUMMARY.md
+│   │   ├── design.md
+│   │   └── CHANGELOG.md
+│   ├── DEPLOYMENT_GUIDE.md   # 完整部署指南
+│   ├── DEPLOYMENT_CHECKLIST.md
+│   ├── DOCKER_DEPLOYMENT.md
+│   ├── DECOUPLING_DESIGN.md  # 解耦设计
+│   ├── IMPLEMENTATION_SUMMARY.md
+│   └── WEB_UI_PAGES_SUMMARY.md
+└── examples/                 # 示例文档
+    ├── README.md
+    ├── BSP_README.md
+    ├── bsp_package/
+    │   ├── README.md
+    │   ├── docs/README.md
+    │   ├── bootloader/README.md
+    │   └── kernel/BSPKernel.md
+    ├── simple_app/README.md
+    ├── web_app/README.md
+    └── cli_tool/README.md
+```
+
+---
+
+## 🎯 系统架构
+
+### 洋葱架构
+
+```
+┌─────────────────────────────────────────┐
+│      Presentation Layer (CLI/Web)       │  ← 用户界面
+├─────────────────────────────────────────┤
+│       Application Layer (Services)      │  ← 业务逻辑
+├─────────────────────────────────────────┤
+│         Domain Layer (Entities)         │  ← 核心模型
+├─────────────────────────────────────────┤
+│      Infrastructure Layer (Database)    │  ← 数据持久化
+└─────────────────────────────────────────┘
+```
+
+### 核心功能
+
+- **包管理**：发布、下载、版本管理
+- **存储系统**：本地存储、S3云存储
+- **Git集成**：commit追踪、branch、tag
+- **权限控制**：用户管理、许可证管理
+- **分组管理**：批量部署相关包
+- **备份恢复**：热备份、冷备份
+
+---
+
+## 🔍 搜索文档
+
+### 按主题
+
+- **安装和部署**：[部署指南](docs_archive/DEPLOYMENT_GUIDE.md)、[Docker部署](docs_archive/DOCKER_DEPLOYMENT.md)
+- **使用方法**：[使用手册](docs_archive/core_docs/USER_MANUAL.md)、[快速入门](docs_archive/core_docs/QUICK_START.md)
+- **架构设计**：[解耦设计](docs_archive/DECOUPLING_DESIGN.md)、[系统设计](docs_archive/binary_manager_docs/design.md)
+- **开发指南**：[Binary Manager V2](docs_archive/binary_manager_docs/BINARY_MANAGER_V2.md)、[V2快速入门](docs_archive/binary_manager_docs/V2_QUICKSTART.md)
+- **测试**：[自动化测试](docs_archive/development_docs/AUTO_TESTS_FEATURE.md)、[集成测试](docs_archive/development_docs/INTEGRATION_TESTS_SUMMARY.md)
+- **备份**：[备份功能文档](docs_archive/development_docs/BACKUP_FEATURE_DOCUMENTATION.md)、[冷备份](docs_archive/development_docs/COLD_BACKUP_FEATURE_COMPLETE.md)
+
+### 按用户角色
+
+- **管理员**：[部署指南](docs_archive/DEPLOYMENT_GUIDE.md)、[用户管理](docs_archive/core_docs/USER_MANUAL.md#用户管理)
+- **开发者**：[Binary Manager V2](docs_archive/binary_manager_docs/BINARY_MANAGER_V2.md)、[发布工具指南](docs_archive/binary_manager_docs/PUBLISH_TOOL_GUIDE.md)
+- **客户**：[使用手册](docs_archive/core_docs/USER_MANUAL.md#下载管理)、[快速入门](docs_archive/core_docs/QUICK_START.md)
+
+---
+
+## 📖 文档更新记录
+
+### 最新更新
+
+- **2026-03-06**: 整理文档结构，创建文档中心
+- **2026-03-01**: 完成自动测试功能
+- **2026402-01**: 完成备份功能
+- **2024-01-15**: Release Portal V3 发布
+
+### 详细变更
+
+参见 [变更日志](docs_archive/core_docs/CHANGELOG.md) 和 [Binary Manager V2变更日志](docs_archive/binary_manager_docs/CHANGELOG.md)
+
+---
+
+## 🤝 贡献
+
+欢迎贡献文档！请修改或添加文档后更新此索引文件。
+
+---
+
+## 📞 联系方式
+
+- **项目主页**: https://github.com/qinyusen/binary_manager
+- **问题反馈**: https://github.com/qinyusen/release_system/issues
+- **技术支持**: [TODO: 添加联系方式]
+
+---
+
+**文档版本**: 1.0  
+**最后更新**: 2026-03-14  
+**维护者**: Release Platform Team
