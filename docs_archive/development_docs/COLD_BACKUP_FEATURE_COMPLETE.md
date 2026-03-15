@@ -8,28 +8,45 @@
 
 | 项目 | 数量 | 说明 |
 |-----|------|------|
-| **核心服务** | 1 个 | ColdBackupService (500+ 行) |
+| **核心服务** | 1 个 | ColdBackupService |
 | **存储后端** | 4 个 | 本地文件系统 + S3 + SFTP + FTP |
+| **单元测试** | 33 个 | 完整的后端测试覆盖 |
 | **API 端点** | 9 个 | 完整的 REST API |
 | **Web UI 页面** | 1 个 | 冷备份管理界面 (400+ 行) |
 | **文档** | 1 个 | 完整功能文档 |
 
-## 📁 新增文件
+### v3.2.0 更新 (2026-03-15)
+
+- 重构 `backends.py` 为模块化结构 (`backends/` 目录)
+- 每个后端独立文件，便于维护和测试
+- 保持向后兼容，现有导入路径无需修改
+- 添加完整的单元测试覆盖 (33 tests)
+
+## 📁 文件结构
 
 ```
 核心服务:
-└── release_portal/application/cold_backup_service.py  # 冷备份服务 (500+ 行)
-    - ColdStorageBackend (抽象基类)
-    - LocalFileSystemBackend (本地文件系统)
-    - S3ColdStorageBackend (S3/Glacier)
-    - ColdBackupService (核心服务)
-    - ColdBackupManager (单例管理器)
+└── release_portal/application/cold_backup/
+    ├── __init__.py
+    ├── manager.py           # ColdBackupManager (单例管理器)
+    ├── service.py           # ColdBackupService (核心服务)
+    ├── backends.py          # 向后兼容层 (从 backends/ 重新导出)
+    └── backends/            # 存储后端模块化结构 (v3.2.0)
+        ├── __init__.py
+        ├── base.py          # ColdStorageBackend (抽象基类)
+        ├── local.py         # LocalFileSystemBackend (本地文件系统)
+        ├── s3.py            # S3ColdStorageBackend (S3/Glacier)
+        ├── sftp.py          # SFTPColdStorageBackend (SFTP)
+        └── ftp.py           # FTPColdStorageBackend (FTP/FTPS)
 
 API 层:
 └── release_portal/presentation/web/api/cold_backup.py  # 冷备份 API (250+ 行)
 
 Web UI:
 └── release_portal/presentation/web/templates/cold_backup.html  # 管理页面 (400+ 行)
+
+测试:
+└── tests/unit/test_cold_backup_backends.py  # 后端单元测试 (33 tests)
 
 集成:
 ├── release_portal/presentation/web/api/__init__.py  # 注册 blueprint
@@ -495,71 +512,62 @@ import threading
 ### 可选依赖
 
 ```python
-# 定时任务
-import schedule  # 需要安装：pip install schedule
-
 # S3 支持
 import boto3  # 需要安装：pip install boto3
+
+# SFTP 支持
+import paramiko  # 需要安装：pip install paramiko
+
+# FTP 使用标准库 ftplib，无需额外安装
 ```
 
 安装依赖：
 ```bash
-pip install schedule boto3
+pip install boto3 paramiko
 ```
 
-## 🧪 测试建议
+### 导入方式
+
+```python
+# 方式 1: 从向后兼容层导入（推荐，与旧代码兼容）
+from release_portal.application.cold_backup.backends import (
+    ColdStorageBackend,
+    LocalFileSystemBackend,
+    S3ColdStorageBackend,
+    SFTPColdStorageBackend,
+    FTPColdStorageBackend,
+)
+
+# 方式 2: 从模块化结构导入
+from release_portal.application.cold_backup.backends.base import ColdStorageBackend
+from release_portal.application.cold_backup.backends.local import LocalFileSystemBackend
+from release_portal.application.cold_backup.backends.s3 import S3ColdStorageBackend
+from release_portal.application.cold_backup.backends.sftp import SFTPColdStorageBackend
+from release_portal.application.cold_backup.backends.ftp import FTPColdStorageBackend
+```
+
+## 🧪 测试
 
 ### 单元测试
 
-```python
-# test_cold_backup.py
+测试文件: `tests/unit/test_cold_backup_backends.py`
 
-def test_local_storage_backend():
-    backend = LocalFileSystemBackend('./test_storage')
-    
-    # 测试存储
-    metadata = backend.store('./test.tar.gz', {'name': 'test'})
-    assert 'archive_id' in metadata
-    
-    # 测试检索
-    success = backend.retrieve(metadata['archive_id'], './restore.tar.gz')
-    assert success == True
-    
-    # 测试列表
-    archives = backend.list_archives()
-    assert len(archives) > 0
-    
-    # 测试删除
-    success = backend.delete(metadata['archive_id'])
-    assert success == True
+运行测试：
+```bash
+# 运行所有冷备份后端测试
+pytest tests/unit/test_cold_backup_backends.py -v
 
-def test_s3_storage_backend():
-    # 需要配置 AWS 凭证
-    backend = S3ColdStorageBackend(
-        bucket='test-bucket',
-        storage_class='GLACIER'
-    )
-    
-    # 类似的测试...
+# 运行特定测试类
+pytest tests/unit/test_cold_backup_backends.py::TestLocalFileSystemBackend -v
 ```
 
-### 集成测试
-
-```python
-def test_cold_backup_workflow():
-    manager = ColdBackupManager()
-    service = manager.initialize(...)
-    
-    # 创建冷备份
-    archive_info = service.create_cold_backup()
-    
-    # 列出归档
-    archives = service.list_cold_archives()
-    assert len(archives) > 0
-    
-    # 清理
-    deleted = service.cleanup_expired_archives()
-```
+测试覆盖:
+- `TestColdStorageBackendBase`: 抽象基类测试
+- `TestLocalFileSystemBackend`: 本地文件系统后端 (14 tests)
+- `TestS3ColdStorageBackend`: S3 后端测试 (6 tests, 使用 Mock)
+- `TestSFTPColdStorageBackend`: SFTP 后端测试 (5 tests, 使用 Mock)
+- `TestFTPColdStorageBackend`: FTP 后端测试 (5 tests, 使用 Mock)
+- `TestBackwardsCompatibility`: 向后兼容性测试 (3 tests)
 
 ## 🚀 快速开始
 
@@ -593,12 +601,14 @@ http://localhost:5000/cold-backup
 
 ## 📊 代码统计
 
-| 类型 | 行数 |
-|-----|------|
-| 核心服务 | 500+ |
-| API 层 | 250+ |
-| Web UI | 400+ |
-| **总计** | **1150+** |
+| 类型 | 文件数 | 行数 |
+|-----|-------|------|
+| 后端核心 (backends/) | 6 | 1000+ |
+| 服务层 (manager.py, service.py) | 2 | 300+ |
+| API 层 | 1 | 250+ |
+| Web UI | 1 | 400+ |
+| 单元测试 | 1 | 530+ |
+| **总计** | **11** | **2500+** |
 
 ## 🎉 总结
 
@@ -616,8 +626,10 @@ http://localhost:5000/cold-backup
 ---
 
 **开发完成日期**: 2024-03-02  
+**最后更新**: 2026-03-15 (v3.2.0 模块化重构)  
 **功能状态**: ✅ 生产就绪  
 **代码质量**: 高  
-**文档**: 完整
+**文档**: 完整  
+**测试覆盖**: 33 单元测试
 
 ❄️ 冷备份，数据安全，成本优化！
