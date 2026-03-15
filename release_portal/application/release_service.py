@@ -3,6 +3,7 @@
 精简代码10%以上，保持功能不变
 """
 
+import logging
 from typing import Optional
 
 from ..domain.entities.release import Release
@@ -12,6 +13,8 @@ from ..domain.repositories import ReleaseRepository
 from ..domain.services import IStorageService
 from ..infrastructure.auth import UUIDGenerator
 from .test_runner import PrePublishValidator, TestResult
+
+logger = logging.getLogger(__name__)
 
 
 class ReleaseService:
@@ -177,7 +180,7 @@ class ReleaseService:
             return
 
         level = test_level or self._test_level
-        print(f"\n🧪 发布前测试（级别: {level}）...")
+        logger.info(f"发布前测试（级别: {level}）...")
 
         result = self._test_validator.validate_before_publish(release_id, level)
 
@@ -188,7 +191,7 @@ class ReleaseService:
                 f"失败: {result.failed_tests}"
             )
 
-        print("✅ 测试通过")
+        logger.info("测试通过")
 
     def _log(
         self,
