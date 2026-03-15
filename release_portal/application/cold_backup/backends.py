@@ -7,10 +7,13 @@ import os
 import json
 import shutil
 import hashlib
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional
 from abc import ABC, abstractmethod
+
+logger = logging.getLogger(__name__)
 
 # 尝试导入可选依赖
 try:
@@ -362,15 +365,15 @@ class SFTPColdStorageBackend(ColdStorageBackend):
         if self._sftp_client:
             try:
                 self._sftp_client.close()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"关闭 SFTP 连接时出错: {e}")
             self._sftp_client = None
 
         if self._ssh_client:
             try:
                 self._ssh_client.close()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"关闭 SSH 连接时出错: {e}")
             self._ssh_client = None
 
     def _ensure_remote_dir(self) -> None:
@@ -502,7 +505,8 @@ class FTPColdStorageBackend(ColdStorageBackend):
             try:
                 self._ftp.voidcmd("NOOP")
                 return
-            except Exception:
+            except Exception as e:
+                logger.debug(f"FTP 连接检查失败，将重新连接: {e}")
                 self._ftp = None
 
         try:
@@ -526,12 +530,12 @@ class FTPColdStorageBackend(ColdStorageBackend):
         if self._ftp:
             try:
                 self._ftp.quit()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"FTP quit 失败: {e}")
             try:
                 self._ftp.close()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"FTP close 失败: {e}")
             self._ftp = None
 
     def _ensure_remote_dir(self) -> None:
@@ -544,8 +548,8 @@ class FTPColdStorageBackend(ColdStorageBackend):
             except Exception:
                 try:
                     self._ftp.mkd(current)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"创建目录失败 {current}: {e}")
         self._ftp.cwd("/")
 
     def _download_metadata(self) -> Dict:
@@ -555,7 +559,8 @@ class FTPColdStorageBackend(ColdStorageBackend):
             data = io.BytesIO()
             self._ftp.retrbinary(f"RETR {self._metadata_file}", data.write)
             return json.loads(data.getvalue().decode("utf-8"))
-        except Exception:
+        except Exception as e:
+            logger.debug(f"下载元数据失败: {e}")
             return {}
 
     def _upload_metadata(self, metadata: Dict) -> None:
@@ -607,7 +612,8 @@ class FTPColdStorageBackend(ColdStorageBackend):
             with open(local_path, "wb") as f:
                 self._ftp.retrbinary(f"RETR {remote_file}", f.write)
             return True
-        except Exception:
+        except Exception as e:
+            logger.warning(f"从 FTP 检索文件失败: {e}")
             return False
 
     def list_archives(self) -> List[Dict]:
@@ -626,8 +632,8 @@ class FTPColdStorageBackend(ColdStorageBackend):
 
         try:
             self._ftp.delete(remote_file)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"删除 FTP 文件失败: {e}")
 
         del all_metadata[backup_id]
         self._upload_metadata(all_metadata)
