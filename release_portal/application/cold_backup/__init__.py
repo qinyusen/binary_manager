@@ -32,6 +32,8 @@ from .backends import (
     ColdStorageBackend,
     LocalFileSystemBackend,
     S3ColdStorageBackend,
+    SFTPColdStorageBackend,
+    FTPColdStorageBackend,
 )
 from .service import ColdBackupService
 from .manager import ColdBackupManager, backup_manager, initialize_backup_manager
@@ -41,6 +43,8 @@ __all__ = [
     "ColdStorageBackend",
     "LocalFileSystemBackend",
     "S3ColdStorageBackend",
+    "SFTPColdStorageBackend",
+    "FTPColdStorageBackend",
     # 核心服务
     "ColdBackupService",
     # 管理器

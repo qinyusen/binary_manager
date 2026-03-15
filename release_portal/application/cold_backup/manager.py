@@ -58,7 +58,12 @@ class ColdBackupManager:
     ):
         """初始化备份管理器（兼容原有接口）"""
         from .service import ColdBackupService
-        from .backends import LocalFileSystemBackend, S3ColdStorageBackend
+        from .backends import (
+            LocalFileSystemBackend,
+            S3ColdStorageBackend,
+            SFTPColdStorageBackend,
+            FTPColdStorageBackend,
+        )
 
         storage_config = storage_config or {}
 
@@ -75,6 +80,27 @@ class ColdBackupManager:
                 endpoint_url=storage_config.get("endpoint_url"),
                 region_name=storage_config.get("region", "us-east-1"),
                 storage_class=storage_config.get("storage_class", "GLACIER"),
+            )
+        elif storage_type == "sftp":
+            backend = SFTPColdStorageBackend(
+                host=storage_config["host"],
+                port=storage_config.get("port", 22),
+                username=storage_config.get("username"),
+                password=storage_config.get("password"),
+                key_path=storage_config.get("key_path"),
+                remote_path=storage_config.get("remote_path", "/cold_backups"),
+                timeout=storage_config.get("timeout", 30),
+            )
+        elif storage_type == "ftp":
+            backend = FTPColdStorageBackend(
+                host=storage_config["host"],
+                port=storage_config.get("port", 21),
+                username=storage_config.get("username"),
+                password=storage_config.get("password"),
+                remote_path=storage_config.get("remote_path", "/cold_backups"),
+                use_tls=storage_config.get("use_tls", True),
+                passive_mode=storage_config.get("passive_mode", True),
+                timeout=storage_config.get("timeout", 30),
             )
         else:
             raise ValueError(f"Unsupported storage type: {storage_type}")

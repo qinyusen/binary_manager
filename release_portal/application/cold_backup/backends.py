@@ -202,7 +202,7 @@ class S3ColdStorageBackend(ColdStorageBackend):
         object_key = f"cold_backups/{backup_id}.tar.gz"
 
         # 计算校验和
-        checksum = self._calculate_checksum(backup_path)
+        checksum = self._calculate_checksum(str(backup_path))
 
         # 上传到S3
         with open(backup_path, "rb") as f:
@@ -300,3 +300,335 @@ class S3ColdStorageBackend(ColdStorageBackend):
             return True
         except ClientError:
             return False
+
+
+class SFTPColdStorageBackend(ColdStorageBackend):
+    """SFTP冷存储后端"""
+
+    def __init__(
+        self,
+        host: str,
+        port: int = 22,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        key_path: Optional[str] = None,
+        remote_path: str = "/cold_backups",
+        timeout: int = 30,
+    ):
+        if not PARAMIKO_AVAILABLE:
+            raise ImportError("paramiko is required for SFTP backend")
+
+        self.host = host
+        self.port = port
+        self.username = username
+        self.password = password
+        self.key_path = key_path
+        self.remote_path = remote_path.rstrip("/")
+        self.timeout = timeout
+
+        self._ssh_client: Optional[paramiko.SSHClient] = None
+        self._sftp_client: Optional[paramiko.SFTPClient] = None
+        self._metadata_file = f"{self.remote_path}/metadata.json"
+
+    def _connect(self) -> None:
+        if self._sftp_client is not None:
+            return
+
+        self._ssh_client = paramiko.SSHClient()
+        self._ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        connect_kwargs = {
+            "hostname": self.host,
+            "port": self.port,
+            "username": self.username,
+            "timeout": self.timeout,
+            "allow_agent": False,
+            "look_for_keys": False,
+        }
+
+        if self.password:
+            connect_kwargs["password"] = self.password
+        elif self.key_path:
+            connect_kwargs["key_filename"] = self.key_path
+
+        try:
+            self._ssh_client.connect(**connect_kwargs)
+            self._sftp_client = self._ssh_client.open_sftp()
+        except Exception as e:
+            self._disconnect()
+            raise ConnectionError(f"Failed to connect to SFTP server: {e}")
+
+    def _disconnect(self) -> None:
+        if self._sftp_client:
+            try:
+                self._sftp_client.close()
+            except Exception:
+                pass
+            self._sftp_client = None
+
+        if self._ssh_client:
+            try:
+                self._ssh_client.close()
+            except Exception:
+                pass
+            self._ssh_client = None
+
+    def _ensure_remote_dir(self) -> None:
+        try:
+            self._sftp_client.stat(self.remote_path)
+        except FileNotFoundError:
+            parts = self.remote_path.split("/")
+            current = ""
+            for part in parts:
+                if not part:
+                    continue
+                current += f"/{part}"
+                try:
+                    self._sftp_client.stat(current)
+                except FileNotFoundError:
+                    self._sftp_client.mkdir(current)
+
+    def _load_metadata(self) -> Dict:
+        try:
+            with self._sftp_client.open(self._metadata_file, "r") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {}
+        except json.JSONDecodeError:
+            return {}
+
+    def _save_metadata(self, metadata: Dict) -> None:
+        self._ensure_remote_dir()
+        with self._sftp_client.open(self._metadata_file, "w") as f:
+            json.dump(metadata, f, indent=2, ensure_ascii=False)
+
+    def store(self, backup_path: str, metadata: Dict) -> Dict:
+        backup_path = Path(backup_path)
+        if not backup_path.exists():
+            raise FileNotFoundError(f"备份文件不存在: {backup_path}")
+
+        self._connect()
+        self._ensure_remote_dir()
+
+        backup_id = metadata["backup_id"]
+        remote_file = f"{self.remote_path}/{backup_id}.tar.gz"
+
+        checksum = self._calculate_checksum(backup_path)
+
+        self._sftp_client.put(str(backup_path), remote_file)
+
+        all_metadata = self._load_metadata()
+        archive_metadata = {
+            **metadata,
+            "storage_location": f"sftp://{self.host}{remote_file}",
+            "checksum": checksum,
+            "size": backup_path.stat().st_size,
+            "stored_at": datetime.now().isoformat(),
+        }
+        all_metadata[backup_id] = archive_metadata
+        self._save_metadata(all_metadata)
+
+        return archive_metadata
+
+    def retrieve(self, backup_id: str, local_path: str) -> bool:
+        self._connect()
+
+        all_metadata = self._load_metadata()
+        if backup_id not in all_metadata:
+            return False
+
+        remote_file = f"{self.remote_path}/{backup_id}.tar.gz"
+
+        try:
+            self._sftp_client.get(remote_file, local_path)
+            return True
+        except FileNotFoundError:
+            return False
+
+    def list_archives(self) -> List[Dict]:
+        self._connect()
+        all_metadata = self._load_metadata()
+        return list(all_metadata.values())
+
+    def delete(self, backup_id: str) -> bool:
+        self._connect()
+
+        all_metadata = self._load_metadata()
+        if backup_id not in all_metadata:
+            return False
+
+        remote_file = f"{self.remote_path}/{backup_id}.tar.gz"
+
+        try:
+            self._sftp_client.remove(remote_file)
+        except FileNotFoundError:
+            pass
+
+        del all_metadata[backup_id]
+        self._save_metadata(all_metadata)
+        return True
+
+
+class FTPColdStorageBackend(ColdStorageBackend):
+    """FTP/FTPS冷存储后端"""
+
+    def __init__(
+        self,
+        host: str,
+        port: int = 21,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        remote_path: str = "/cold_backups",
+        use_tls: bool = True,
+        passive_mode: bool = True,
+        timeout: int = 30,
+    ):
+        self.host = host
+        self.port = port
+        self.username = username or "anonymous"
+        self.password = password or ""
+        self.remote_path = remote_path.rstrip("/")
+        self.use_tls = use_tls
+        self.passive_mode = passive_mode
+        self.timeout = timeout
+
+        self._ftp = None
+        self._metadata_file = f"{self.remote_path}/metadata.json"
+
+    def _connect(self) -> None:
+        from ftplib import FTP, FTP_TLS
+
+        if self._ftp is not None:
+            try:
+                self._ftp.voidcmd("NOOP")
+                return
+            except Exception:
+                self._ftp = None
+
+        try:
+            if self.use_tls:
+                self._ftp = FTP_TLS(timeout=self.timeout)
+            else:
+                self._ftp = FTP(timeout=self.timeout)
+
+            self._ftp.connect(self.host, self.port)
+            self._ftp.login(self.username, self.password)
+
+            if self.use_tls and hasattr(self._ftp, "prot_p"):
+                self._ftp.prot_p()
+
+            self._ftp.set_pasv(self.passive_mode)
+        except Exception as e:
+            self._disconnect()
+            raise ConnectionError(f"Failed to connect to FTP server: {e}")
+
+    def _disconnect(self) -> None:
+        if self._ftp:
+            try:
+                self._ftp.quit()
+            except Exception:
+                pass
+            try:
+                self._ftp.close()
+            except Exception:
+                pass
+            self._ftp = None
+
+    def _ensure_remote_dir(self) -> None:
+        parts = self.remote_path.strip("/").split("/")
+        current = ""
+        for part in parts:
+            current += f"/{part}"
+            try:
+                self._ftp.cwd(current)
+            except Exception:
+                try:
+                    self._ftp.mkd(current)
+                except Exception:
+                    pass
+        self._ftp.cwd("/")
+
+    def _download_metadata(self) -> Dict:
+        import io
+
+        try:
+            data = io.BytesIO()
+            self._ftp.retrbinary(f"RETR {self._metadata_file}", data.write)
+            return json.loads(data.getvalue().decode("utf-8"))
+        except Exception:
+            return {}
+
+    def _upload_metadata(self, metadata: Dict) -> None:
+        import io
+
+        self._ensure_remote_dir()
+        data = json.dumps(metadata, indent=2, ensure_ascii=False).encode("utf-8")
+        self._ftp.storbinary(f"STOR {self._metadata_file}", io.BytesIO(data))
+
+    def store(self, backup_path: str, metadata: Dict) -> Dict:
+        backup_path = Path(backup_path)
+        if not backup_path.exists():
+            raise FileNotFoundError(f"备份文件不存在: {backup_path}")
+
+        self._connect()
+        self._ensure_remote_dir()
+
+        backup_id = metadata["backup_id"]
+        remote_file = f"{self.remote_path}/{backup_id}.tar.gz"
+
+        checksum = self._calculate_checksum(backup_path)
+
+        with open(backup_path, "rb") as f:
+            self._ftp.storbinary(f"STOR {remote_file}", f)
+
+        all_metadata = self._download_metadata()
+        archive_metadata = {
+            **metadata,
+            "storage_location": f"ftp://{self.host}{remote_file}",
+            "checksum": checksum,
+            "size": backup_path.stat().st_size,
+            "stored_at": datetime.now().isoformat(),
+        }
+        all_metadata[backup_id] = archive_metadata
+        self._upload_metadata(all_metadata)
+
+        return archive_metadata
+
+    def retrieve(self, backup_id: str, local_path: str) -> bool:
+        self._connect()
+
+        all_metadata = self._download_metadata()
+        if backup_id not in all_metadata:
+            return False
+
+        remote_file = f"{self.remote_path}/{backup_id}.tar.gz"
+
+        try:
+            with open(local_path, "wb") as f:
+                self._ftp.retrbinary(f"RETR {remote_file}", f.write)
+            return True
+        except Exception:
+            return False
+
+    def list_archives(self) -> List[Dict]:
+        self._connect()
+        all_metadata = self._download_metadata()
+        return list(all_metadata.values())
+
+    def delete(self, backup_id: str) -> bool:
+        self._connect()
+
+        all_metadata = self._download_metadata()
+        if backup_id not in all_metadata:
+            return False
+
+        remote_file = f"{self.remote_path}/{backup_id}.tar.gz"
+
+        try:
+            self._ftp.delete(remote_file)
+        except Exception:
+            pass
+
+        del all_metadata[backup_id]
+        self._upload_metadata(all_metadata)
+        return True
