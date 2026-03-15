@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 from ftplib import FTP, FTP_TLS
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from .base import ColdStorageBackend
 
@@ -29,18 +29,6 @@ class FTPColdStorageBackend(ColdStorageBackend):
         passive_mode: bool = True,
         timeout: int = 30,
     ):
-        """初始化FTP后端
-
-        Args:
-            host: FTP服务器地址
-            port: FTP服务器端口
-            username: 用户名（默认anonymous）
-            password: 密码
-            remote_path: 远程存储路径
-            use_tls: 是否使用TLS加密（FTPS）
-            passive_mode: 是否使用被动模式
-            timeout: 连接超时时间（秒）
-        """
         self.host = host
         self.port = port
         self.username = username or "anonymous"
@@ -50,11 +38,10 @@ class FTPColdStorageBackend(ColdStorageBackend):
         self.passive_mode = passive_mode
         self.timeout = timeout
 
-        self._ftp = None
+        self._ftp: Optional[Union[FTP, FTP_TLS]] = None
         self._metadata_file = f"{self.remote_path}/metadata.json"
 
     def _connect(self) -> None:
-        """建立FTP连接"""
         if self._ftp is not None:
             try:
                 self._ftp.voidcmd("NOOP")
@@ -72,7 +59,7 @@ class FTPColdStorageBackend(ColdStorageBackend):
             self._ftp.connect(self.host, self.port)
             self._ftp.login(self.username, self.password)
 
-            if self.use_tls and hasattr(self._ftp, "prot_p"):
+            if self.use_tls and isinstance(self._ftp, FTP_TLS):
                 self._ftp.prot_p()
 
             self._ftp.set_pasv(self.passive_mode)
@@ -81,7 +68,6 @@ class FTPColdStorageBackend(ColdStorageBackend):
             raise ConnectionError(f"Failed to connect to FTP server: {e}")
 
     def _disconnect(self) -> None:
-        """断开FTP连接"""
         if self._ftp:
             try:
                 self._ftp.quit()
@@ -94,7 +80,7 @@ class FTPColdStorageBackend(ColdStorageBackend):
             self._ftp = None
 
     def _ensure_remote_dir(self) -> None:
-        """确保远程目录存在"""
+        assert self._ftp is not None
         parts = self.remote_path.strip("/").split("/")
         current = ""
         for part in parts:
@@ -109,7 +95,7 @@ class FTPColdStorageBackend(ColdStorageBackend):
         self._ftp.cwd("/")
 
     def _download_metadata(self) -> Dict:
-        """从FTP服务器下载元数据"""
+        assert self._ftp is not None
         try:
             data = io.BytesIO()
             self._ftp.retrbinary(f"RETR {self._metadata_file}", data.write)
@@ -119,15 +105,14 @@ class FTPColdStorageBackend(ColdStorageBackend):
             return {}
 
     def _upload_metadata(self, metadata: Dict) -> None:
-        """上传元数据到FTP服务器"""
+        assert self._ftp is not None
         self._ensure_remote_dir()
         data = json.dumps(metadata, indent=2, ensure_ascii=False).encode("utf-8")
         self._ftp.storbinary(f"STOR {self._metadata_file}", io.BytesIO(data))
 
     def store(self, backup_path: str, metadata: Dict) -> Dict:
-        """存储备份到FTP服务器"""
-        backup_path = Path(backup_path)
-        if not backup_path.exists():
+        source_path = Path(backup_path)
+        if not source_path.exists():
             raise FileNotFoundError(f"备份文件不存在: {backup_path}")
 
         self._connect()
@@ -136,9 +121,10 @@ class FTPColdStorageBackend(ColdStorageBackend):
         backup_id = metadata["backup_id"]
         remote_file = f"{self.remote_path}/{backup_id}.tar.gz"
 
-        checksum = self._calculate_checksum(backup_path)
+        checksum = self._calculate_checksum(source_path)
 
-        with open(backup_path, "rb") as f:
+        assert self._ftp is not None
+        with open(source_path, "rb") as f:
             self._ftp.storbinary(f"STOR {remote_file}", f)
 
         all_metadata = self._download_metadata()
@@ -146,7 +132,7 @@ class FTPColdStorageBackend(ColdStorageBackend):
             **metadata,
             "storage_location": f"ftp://{self.host}{remote_file}",
             "checksum": checksum,
-            "size": backup_path.stat().st_size,
+            "size": source_path.stat().st_size,
             "stored_at": datetime.now().isoformat(),
         }
         all_metadata[backup_id] = archive_metadata
@@ -155,7 +141,6 @@ class FTPColdStorageBackend(ColdStorageBackend):
         return archive_metadata
 
     def retrieve(self, backup_id: str, local_path: str) -> bool:
-        """从FTP服务器检索备份"""
         self._connect()
 
         all_metadata = self._download_metadata()
@@ -164,6 +149,7 @@ class FTPColdStorageBackend(ColdStorageBackend):
 
         remote_file = f"{self.remote_path}/{backup_id}.tar.gz"
 
+        assert self._ftp is not None
         try:
             with open(local_path, "wb") as f:
                 self._ftp.retrbinary(f"RETR {remote_file}", f.write)
@@ -173,13 +159,11 @@ class FTPColdStorageBackend(ColdStorageBackend):
             return False
 
     def list_archives(self) -> List[Dict]:
-        """列出FTP服务器上的所有归档"""
         self._connect()
         all_metadata = self._download_metadata()
         return list(all_metadata.values())
 
     def delete(self, backup_id: str) -> bool:
-        """从FTP服务器删除归档"""
         self._connect()
 
         all_metadata = self._download_metadata()
@@ -188,6 +172,7 @@ class FTPColdStorageBackend(ColdStorageBackend):
 
         remote_file = f"{self.remote_path}/{backup_id}.tar.gz"
 
+        assert self._ftp is not None
         try:
             self._ftp.delete(remote_file)
         except Exception as e:

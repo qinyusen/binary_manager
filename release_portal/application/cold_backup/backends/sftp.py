@@ -6,19 +6,22 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from .base import ColdStorageBackend
 
+if TYPE_CHECKING:
+    import paramiko
+
 logger = logging.getLogger(__name__)
 
-# 尝试导入可选依赖
 try:
     import paramiko
 
     PARAMIKO_AVAILABLE = True
 except ImportError:
     PARAMIKO_AVAILABLE = False
+    paramiko = None  # type: ignore
 
 
 class SFTPColdStorageBackend(ColdStorageBackend):
@@ -34,17 +37,6 @@ class SFTPColdStorageBackend(ColdStorageBackend):
         remote_path: str = "/cold_backups",
         timeout: int = 30,
     ):
-        """初始化SFTP后端
-
-        Args:
-            host: SFTP服务器地址
-            port: SFTP服务器端口
-            username: 用户名
-            password: 密码
-            key_path: SSH私钥路径
-            remote_path: 远程存储路径
-            timeout: 连接超时时间（秒）
-        """
         if not PARAMIKO_AVAILABLE:
             raise ImportError("paramiko is required for SFTP backend")
 
@@ -56,19 +48,19 @@ class SFTPColdStorageBackend(ColdStorageBackend):
         self.remote_path = remote_path.rstrip("/")
         self.timeout = timeout
 
-        self._ssh_client: Optional[paramiko.SSHClient] = None
-        self._sftp_client: Optional[paramiko.SFTPClient] = None
+        self._ssh_client: Optional[Any] = None
+        self._sftp_client: Optional[Any] = None
         self._metadata_file = f"{self.remote_path}/metadata.json"
 
     def _connect(self) -> None:
-        """建立SFTP连接"""
         if self._sftp_client is not None:
             return
 
+        assert paramiko is not None
         self._ssh_client = paramiko.SSHClient()
         self._ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        connect_kwargs = {
+        connect_kwargs: Dict[str, Any] = {
             "hostname": self.host,
             "port": self.port,
             "username": self.username,
@@ -90,7 +82,6 @@ class SFTPColdStorageBackend(ColdStorageBackend):
             raise ConnectionError(f"Failed to connect to SFTP server: {e}")
 
     def _disconnect(self) -> None:
-        """断开SFTP连接"""
         if self._sftp_client:
             try:
                 self._sftp_client.close()
@@ -106,7 +97,7 @@ class SFTPColdStorageBackend(ColdStorageBackend):
             self._ssh_client = None
 
     def _ensure_remote_dir(self) -> None:
-        """确保远程目录存在"""
+        assert self._sftp_client is not None
         try:
             self._sftp_client.stat(self.remote_path)
         except FileNotFoundError:
@@ -122,7 +113,7 @@ class SFTPColdStorageBackend(ColdStorageBackend):
                     self._sftp_client.mkdir(current)
 
     def _load_metadata(self) -> Dict:
-        """从远程服务器加载元数据"""
+        assert self._sftp_client is not None
         try:
             with self._sftp_client.open(self._metadata_file, "r") as f:
                 return json.load(f)
@@ -132,15 +123,14 @@ class SFTPColdStorageBackend(ColdStorageBackend):
             return {}
 
     def _save_metadata(self, metadata: Dict) -> None:
-        """保存元数据到远程服务器"""
+        assert self._sftp_client is not None
         self._ensure_remote_dir()
         with self._sftp_client.open(self._metadata_file, "w") as f:
             json.dump(metadata, f, indent=2, ensure_ascii=False)
 
     def store(self, backup_path: str, metadata: Dict) -> Dict:
-        """存储备份到SFTP服务器"""
-        backup_path = Path(backup_path)
-        if not backup_path.exists():
+        source_path = Path(backup_path)
+        if not source_path.exists():
             raise FileNotFoundError(f"备份文件不存在: {backup_path}")
 
         self._connect()
@@ -149,16 +139,17 @@ class SFTPColdStorageBackend(ColdStorageBackend):
         backup_id = metadata["backup_id"]
         remote_file = f"{self.remote_path}/{backup_id}.tar.gz"
 
-        checksum = self._calculate_checksum(backup_path)
+        checksum = self._calculate_checksum(source_path)
 
-        self._sftp_client.put(str(backup_path), remote_file)
+        assert self._sftp_client is not None
+        self._sftp_client.put(str(source_path), remote_file)
 
         all_metadata = self._load_metadata()
         archive_metadata = {
             **metadata,
             "storage_location": f"sftp://{self.host}{remote_file}",
             "checksum": checksum,
-            "size": backup_path.stat().st_size,
+            "size": source_path.stat().st_size,
             "stored_at": datetime.now().isoformat(),
         }
         all_metadata[backup_id] = archive_metadata
@@ -167,7 +158,6 @@ class SFTPColdStorageBackend(ColdStorageBackend):
         return archive_metadata
 
     def retrieve(self, backup_id: str, local_path: str) -> bool:
-        """从SFTP服务器检索备份"""
         self._connect()
 
         all_metadata = self._load_metadata()
@@ -176,6 +166,7 @@ class SFTPColdStorageBackend(ColdStorageBackend):
 
         remote_file = f"{self.remote_path}/{backup_id}.tar.gz"
 
+        assert self._sftp_client is not None
         try:
             self._sftp_client.get(remote_file, local_path)
             return True
@@ -183,13 +174,11 @@ class SFTPColdStorageBackend(ColdStorageBackend):
             return False
 
     def list_archives(self) -> List[Dict]:
-        """列出SFTP服务器上的所有归档"""
         self._connect()
         all_metadata = self._load_metadata()
         return list(all_metadata.values())
 
     def delete(self, backup_id: str) -> bool:
-        """从SFTP服务器删除归档"""
         self._connect()
 
         all_metadata = self._load_metadata()
@@ -198,6 +187,7 @@ class SFTPColdStorageBackend(ColdStorageBackend):
 
         remote_file = f"{self.remote_path}/{backup_id}.tar.gz"
 
+        assert self._sftp_client is not None
         try:
             self._sftp_client.remove(remote_file)
         except FileNotFoundError:
