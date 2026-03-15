@@ -1,0 +1,1988 @@
+openapi: 3.0.3
+info:
+  title: Release Portal API
+  description: |
+    地瓜机器人软件发布管理平台 REST API
+    
+    ## 概述
+    
+    Release Portal V3 是一个软件发布管理平台，支持：
+    - BSP、驱动和示例程序的发布管理
+    - 基于许可证的权限控制
+    - 用户角色管理 (Admin/Publisher/Customer)
+    - 热备份和冷备份功能
+    - 完整的审计日志系统
+    
+    ## 认证
+    
+    大多数 API 需要 JWT Token 认证。在请求头中添加：
+    ```
+    Authorization: Bearer <your_jwt_token>
+    ```
+    
+    通过 `/api/auth/login` 获取 Token。
+    
+    ## 角色权限
+    
+    | 角色 | 发布 | 下载 | 用户管理 | 许可证管理 |
+    |------|-----|------|---------|-----------|
+    | Admin | ✓ | ✓ | ✓ | ✓ |
+    | Publisher | ✓ | ✓ | ✗ | ✗ |
+    | Customer | ✗ | * | ✗ | ✗ |
+    
+    *Customer 的下载权限取决于其许可证
+    
+    ## 许可证级别
+    
+    | 级别 | 源码 | 二进制 | 文档 |
+    |------|-----|-------|-----|
+    | FULL_ACCESS | ✓ | ✓ | ✓ |
+    | BINARY_ACCESS | ✗ | ✓ | ✓ |
+    
+  version: 3.1.0
+  contact:
+    name: Release Platform Team
+    url: https://github.com/qinyusen/release_system
+  license:
+    name: MIT
+    
+servers:
+  - url: http://localhost:5000
+    description: 开发服务器
+  - url: http://localhost:5000/api
+    description: API 前缀
+
+tags:
+  - name: 认证
+    description: 用户登录、注册、Token 验证
+  - name: 发布管理
+    description: 创建、发布、归档软件版本
+  - name: 下载管理
+    description: 获取可下载包列表、下载文件
+  - name: 许可证管理
+    description: 创建、激活、撤销许可证
+  - name: 备份管理
+    description: 数据库和存储备份
+  - name: 冷备份管理
+    description: 长期归档存储
+  - name: 审计日志
+    description: 操作日志查询和统计
+
+paths:
+  # ==================== 认证 API ====================
+  /api/auth/login:
+    post:
+      tags:
+        - 认证
+      summary: 用户登录
+      description: 使用用户名和密码登录，获取 JWT Token
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              normal_login:
+                summary: 普通登录
+                value:
+                  username: admin
+                  password: password123
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 认证失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/verify:
+    get:
+      tags:
+        - 认证
+      summary: 验证 Token
+      description: 验证当前 Token 是否有效
+      operationId: verifyToken
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token 有效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+        '401':
+          description: Token 无效或已过期
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/logout:
+    post:
+      tags:
+        - 认证
+      summary: 用户登出
+      description: 用户登出（客户端删除 Token）
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 登出成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully
+
+  /api/auth/register:
+    post:
+      tags:
+        - 认证
+      summary: 注册新用户
+      description: 注册新用户（仅管理员可操作）
+      operationId: register
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== 发布管理 API ====================
+  /api/releases:
+    get:
+      tags:
+        - 发布管理
+      summary: 列出所有发布
+      description: 获取所有发布版本列表，支持按类型和状态筛选
+      operationId: listReleases
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          description: 资源类型
+          schema:
+            type: string
+            enum: [BSP, DRIVER, EXAMPLES]
+        - name: status
+          in: query
+          description: 发布状态
+          schema:
+            type: string
+            enum: [DRAFT, PUBLISHED, ARCHIVED]
+      responses:
+        '200':
+          description: 成功获取发布列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReleaseListResponse'
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - 发布管理
+      summary: 创建发布草稿
+      description: 创建一个新的发布草稿
+      operationId: createRelease
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReleaseRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/releases/{release_id}:
+    get:
+      tags:
+        - 发布管理
+      summary: 获取发布详情
+      description: 根据 ID 获取发布的详细信息
+      operationId: getRelease
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: release_id
+          in: path
+          required: true
+          description: 发布 ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功获取发布详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  release:
+                    $ref: '#/components/schemas/Release'
+        '404':
+          description: 发布不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/releases/{release_id}/packages:
+    post:
+      tags:
+        - 发布管理
+      summary: 上传包文件
+      description: 上传包文件并添加到发布中
+      operationId: uploadPackage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: release_id
+          in: path
+          required: true
+          description: 发布 ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - package_file
+                - content_type
+              properties:
+                package_file:
+                  type: string
+                  format: binary
+                  description: 包文件 (.tar.gz, .tar, .zip)
+                content_type:
+                  type: string
+                  enum: [SOURCE, BINARY, DOCUMENT]
+                  description: 内容类型
+      responses:
+        '201':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  package_id:
+                    type: string
+                  message:
+                    type: string
+                    example: Package uploaded successfully
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/releases/{release_id}/publish:
+    post:
+      tags:
+        - 发布管理
+      summary: 发布版本
+      description: 将草稿发布为正式版本
+      operationId: publishRelease
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: release_id
+          in: path
+          required: true
+          description: 发布 ID
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                run_tests:
+                  type: boolean
+                  description: 是否运行测试
+                  default: false
+                test_level:
+                  type: string
+                  description: 测试级别
+                  default: critical
+      responses:
+        '200':
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/releases/{release_id}/archive:
+    post:
+      tags:
+        - 发布管理
+      summary: 归档版本
+      description: 将发布版本归档
+      operationId: archiveRelease
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: release_id
+          in: path
+          required: true
+          description: 发布 ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 归档成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== 下载管理 API ====================
+  /api/downloads/releases:
+    get:
+      tags:
+        - 下载管理
+      summary: 列出可下载的发布
+      description: 获取当前用户可下载的发布列表
+      operationId: listDownloadableReleases
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功获取列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadableReleasesResponse'
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/downloads/{release_id}/packages:
+    get:
+      tags:
+        - 下载管理
+      summary: 获取可下载的包列表
+      description: 获取指定发布的可下载包列表（根据权限过滤）
+      operationId: getAvailablePackages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: release_id
+          in: path
+          required: true
+          description: 发布 ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功获取包列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackageListResponse'
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/downloads/{release_id}/download/{content_type}:
+    get:
+      tags:
+        - 下载管理
+      summary: 下载包
+      description: 下载指定类型的内容包
+      operationId: downloadPackage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: release_id
+          in: path
+          required: true
+          description: 发布 ID
+          schema:
+            type: string
+        - name: content_type
+          in: path
+          required: true
+          description: 内容类型
+          schema:
+            type: string
+            enum: [SOURCE, BINARY, DOCUMENT]
+      responses:
+        '200':
+          description: 文件下载
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 包不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/downloads/license:
+    get:
+      tags:
+        - 下载管理
+      summary: 获取用户许可证信息
+      description: 获取当前用户的许可证详细信息
+      operationId: getUserLicense
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功获取许可证信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserLicenseResponse'
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== 许可证管理 API ====================
+  /api/licenses:
+    get:
+      tags:
+        - 许可证管理
+      summary: 列出所有许可证
+      description: 获取所有许可证列表
+      operationId: listLicenses
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: active_only
+          in: query
+          description: 仅返回激活的许可证
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: 成功获取许可证列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseListResponse'
+        '401':
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - 许可证管理
+      summary: 创建许可证
+      description: 创建新的许可证（仅管理员）
+      operationId: createLicense
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLicenseRequest'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/licenses/{license_id}:
+    get:
+      tags:
+        - 许可证管理
+      summary: 获取许可证详情
+      description: 根据 ID 获取许可证详细信息
+      operationId: getLicense
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: license_id
+          in: path
+          required: true
+          description: 许可证 ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功获取许可证详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  license:
+                    $ref: '#/components/schemas/License'
+        '404':
+          description: 许可证不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/licenses/{license_id}/revoke:
+    post:
+      tags:
+        - 许可证管理
+      summary: 撤销许可证
+      description: 撤销指定许可证（仅管理员）
+      operationId: revokeLicense
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: license_id
+          in: path
+          required: true
+          description: 许可证 ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 撤销成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: License revoked successfully
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/licenses/{license_id}/activate:
+    post:
+      tags:
+        - 许可证管理
+      summary: 激活许可证
+      description: 激活指定许可证（仅管理员）
+      operationId: activateLicense
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: license_id
+          in: path
+          required: true
+          description: 许可证 ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 激活成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: License activated successfully
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/licenses/{license_id}/extend:
+    post:
+      tags:
+        - 许可证管理
+      summary: 延期许可证
+      description: 延长许可证有效期（仅管理员）
+      operationId: extendLicense
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: license_id
+          in: path
+          required: true
+          description: 许可证 ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                days:
+                  type: integer
+                  description: 延期天数
+                  example: 30
+                date:
+                  type: string
+                  format: date-time
+                  description: 或延期到指定日期
+      responses:
+        '200':
+          description: 延期成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/License'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== 备份管理 API ====================
+  /api/backup:
+    get:
+      tags:
+        - 备份管理
+      summary: 列出所有备份
+      description: 获取所有备份文件列表（仅管理员）
+      operationId: listBackups
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功获取备份列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupListResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/backup/create:
+    post:
+      tags:
+        - 备份管理
+      summary: 创建备份
+      description: 创建数据库和存储备份（仅管理员）
+      operationId: createBackup
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 备份名称（可选）
+                include_storage:
+                  type: boolean
+                  description: 是否包含存储文件
+                  default: true
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupInfo'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/backup/{backup_filename}:
+    get:
+      tags:
+        - 备份管理
+      summary: 获取备份详情
+      description: 获取指定备份的详细信息（仅管理员）
+      operationId: getBackupInfo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: backup_filename
+          in: path
+          required: true
+          description: 备份文件名
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功获取备份详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupInfo'
+        '404':
+          description: 备份不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - 备份管理
+      summary: 删除备份
+      description: 删除指定备份文件（仅管理员）
+      operationId: deleteBackup
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: backup_filename
+          in: path
+          required: true
+          description: 备份文件名
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Backup deleted successfully
+        '404':
+          description: 备份不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/backup/{backup_filename}/download:
+    get:
+      tags:
+        - 备份管理
+      summary: 下载备份文件
+      description: 下载指定备份文件（仅管理员）
+      operationId: downloadBackup
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: backup_filename
+          in: path
+          required: true
+          description: 备份文件名
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 文件下载
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: 备份不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/backup/restore:
+    post:
+      tags:
+        - 备份管理
+      summary: 恢复备份
+      description: 从备份文件恢复数据（仅管理员）
+      operationId: restoreBackup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - backup_filename
+              properties:
+                backup_filename:
+                  type: string
+                  description: 备份文件名
+                target_db_path:
+                  type: string
+                  description: 目标数据库路径（可选）
+                target_storage_path:
+                  type: string
+                  description: 目标存储路径（可选）
+      responses:
+        '200':
+          description: 恢复成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreResponse'
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== 冷备份管理 API ====================
+  /api/cold-backup:
+    get:
+      tags:
+        - 冷备份管理
+      summary: 列出所有冷归档
+      description: 获取所有冷归档列表（仅管理员）
+      operationId: listColdArchives
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功获取归档列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColdArchiveListResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/cold-backup/create:
+    post:
+      tags:
+        - 冷备份管理
+      summary: 创建冷备份
+      description: 创建长期归档备份（仅管理员）
+      operationId: createColdBackup
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                backup_name:
+                  type: string
+                  description: 备份名称（可选）
+                include_storage:
+                  type: boolean
+                  description: 是否包含存储文件
+                  default: true
+                storage_type:
+                  type: string
+                  description: 存储类型
+                  enum: [local, s3, sftp, ftp]
+                  default: local
+                storage_config:
+                  type: object
+                  description: 存储配置
+                  properties:
+                    # Local storage
+                    path:
+                      type: string
+                      description: 本地存储路径（local 类型时使用）
+                    # S3 storage
+                    bucket:
+                      type: string
+                      description: S3 Bucket 名称（s3 类型时必需）
+                    access_key:
+                      type: string
+                      description: S3 Access Key（s3 类型时可选）
+                    secret_key:
+                      type: string
+                      description: S3 Secret Key（s3 类型时可选）
+                    endpoint_url:
+                      type: string
+                      description: S3 Endpoint URL（s3 类型时可选）
+                    region:
+                      type: string
+                      description: S3 区域（s3 类型时可选，默认 us-east-1）
+                    storage_class:
+                      type: string
+                      description: S3 存储类型（s3 类型时可选，默认 GLACIER）
+                    # SFTP storage
+                    host:
+                      type: string
+                      description: SFTP 服务器地址（sftp 类型时必需）
+                    port:
+                      type: integer
+                      description: SFTP 端口（sftp 类型时可选，默认 22）
+                    username:
+                      type: string
+                      description: SFTP 用户名（sftp 类型时必需）
+                    password:
+                      type: string
+                      description: SFTP 密码（与 key_path 二选一，sftp 类型时使用）
+                    key_path:
+                      type: string
+                      description: SSH 私钥路径（与 password 二选一，sftp 类型时使用）
+                    remote_path:
+                      type: string
+                      description: 远程存储路径（sftp/ftp 类型时可选，默认 /cold_backups）
+                    timeout:
+                      type: integer
+                      description: 连接超时（秒，sftp/ftp 类型时可选，默认 30）
+                    # FTP storage
+                    use_tls:
+                      type: boolean
+                      description: 是否使用 FTPS（ftp 类型时可选，默认 True）
+                    passive_mode:
+                      type: boolean
+                      description: 是否使用被动模式（ftp 类型时可选，默认 True）
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColdArchiveInfo'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/cold-backup/{archive_id}:
+    get:
+      tags:
+        - 冷备份管理
+      summary: 获取冷归档详情
+      description: 获取指定冷归档的详细信息（仅管理员）
+      operationId: getColdArchiveInfo
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: archive_id
+          in: path
+          required: true
+          description: 归档 ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功获取归档详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColdArchiveInfo'
+        '404':
+          description: 归档不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - 冷备份管理
+      summary: 删除冷归档
+      description: 删除指定冷归档（仅管理员）
+      operationId: deleteColdArchive
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: archive_id
+          in: path
+          required: true
+          description: 归档 ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Archive deleted successfully
+        '404':
+          description: 归档不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/cold-backup/{archive_id}/retrieve:
+    post:
+      tags:
+        - 冷备份管理
+      summary: 检索冷归档
+      description: 从冷存储检索归档到本地（仅管理员）
+      operationId: retrieveColdArchive
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: archive_id
+          in: path
+          required: true
+          description: 归档 ID
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                restore_path:
+                  type: string
+                  description: 恢复路径
+                  example: /tmp/restore.tar.gz
+      responses:
+        '200':
+          description: 检索成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  archive_id:
+                    type: string
+                  local_path:
+                    type: string
+        '404':
+          description: 归档不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/cold-backup/cleanup:
+    post:
+      tags:
+        - 冷备份管理
+      summary: 清理过期归档
+      description: 清理所有过期的冷归档（仅管理员）
+      operationId: cleanupExpiredArchives
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 清理完成
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+                  message:
+                    type: string
+                    example: Cleaned up 3 expired archives
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/cold-backup/policy:
+    get:
+      tags:
+        - 冷备份管理
+      summary: 获取备份策略
+      description: 获取当前备份策略配置（仅管理员）
+      operationId: getBackupPolicy
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功获取策略
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupPolicy'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/cold-backup/schedule:
+    post:
+      tags:
+        - 冷备份管理
+      summary: 设置定时备份
+      description: 设置自动定时备份任务（仅管理员）
+      operationId: scheduleAutomaticBackup
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                interval_hours:
+                  type: integer
+                  description: 备份间隔（小时）
+                  default: 24
+      responses:
+        '200':
+          description: 设置成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Scheduled automatic backup every 24 hours
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/cold-backup/storage-info:
+    get:
+      tags:
+        - 冷备份管理
+      summary: 获取存储信息
+      description: 获取冷存储的统计信息（仅管理员）
+      operationId: getStorageInfo
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 成功获取存储信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StorageInfo'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== 审计日志 API ====================
+  /api/audit/logs:
+    get:
+      tags:
+        - 审计日志
+      summary: 查询审计日志
+      description: 查询审计日志，支持多种筛选条件（仅管理员）
+      operationId: listAuditLogs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: query
+          description: 用户 ID 筛选
+          schema:
+            type: string
+        - name: username
+          in: query
+          description: 用户名筛选（支持模糊搜索）
+          schema:
+            type: string
+        - name: action
+          in: query
+          description: 操作类型
+          schema:
+            type: string
+            enum: [LOGIN, LOGOUT, RELEASE_CREATE, RELEASE_PUBLISH, RELEASE_ARCHIVE, DOWNLOAD, LICENSE_CREATE, LICENSE_REVOKE, BACKUP_CREATE, BACKUP_RESTORE, USER_CREATE, USER_UPDATE]
+        - name: resource_type
+          in: query
+          description: 资源类型
+          schema:
+            type: string
+        - name: resource_id
+          in: query
+          description: 资源 ID
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: 状态筛选
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          description: 开始日期 (ISO8601)
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          description: 结束日期 (ISO8601)
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          description: 返回数量限制
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          description: 偏移量
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: 成功获取日志列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogListResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/audit/logs/statistics:
+    get:
+      tags:
+        - 审计日志
+      summary: 获取审计统计
+      description: 获取审计日志统计信息（仅管理员）
+      operationId: getAuditStatistics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start_date
+          in: query
+          description: 开始日期 (ISO8601)
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          description: 结束日期 (ISO8601)
+          schema:
+            type: string
+            format: date-time
+        - name: user_id
+          in: query
+          description: 用户 ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功获取统计信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditStatisticsResponse'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/audit/logs/{log_id}:
+    get:
+      tags:
+        - 审计日志
+      summary: 获取日志详情
+      description: 获取单条审计日志详情（仅管理员）
+      operationId: getAuditLogDetails
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: log_id
+          in: path
+          required: true
+          description: 日志 ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功获取日志详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  log:
+                    $ref: '#/components/schemas/AuditLog'
+        '404':
+          description: 日志不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/audit/logs/cleanup:
+    post:
+      tags:
+        - 审计日志
+      summary: 清理旧日志
+      description: 清理超过保留天数的审计日志（仅管理员）
+      operationId: cleanupOldLogs
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                retention_days:
+                  type: integer
+                  description: 保留天数
+                  default: 90
+      responses:
+        '200':
+          description: 清理完成
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted_count:
+                    type: integer
+                  message:
+                    type: string
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/audit/logs/export:
+    post:
+      tags:
+        - 审计日志
+      summary: 导出审计日志
+      description: 导出审计日志为 CSV 或 JSON 格式（仅管理员）
+      operationId: exportLogs
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filters:
+                  type: object
+                  description: 可选的过滤条件
+                format:
+                  type: string
+                  description: 导出格式
+                  enum: [csv, json]
+                  default: csv
+      responses:
+        '200':
+          description: 导出成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  filename:
+                    type: string
+                  content_type:
+                    type: string
+                  data:
+                    type: string
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Token 认证，通过 /api/auth/login 获取
+
+  schemas:
+    # ========== 通用响应 ==========
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Bad Request
+        message:
+          type: string
+          example: Invalid parameter
+
+    # ========== 认证相关 ==========
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: admin
+        password:
+          type: string
+          format: password
+          example: password123
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT Token
+        user:
+          $ref: '#/components/schemas/User'
+
+    VerifyResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        user:
+          $ref: '#/components/schemas/User'
+
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+        - role_id
+      properties:
+        username:
+          type: string
+          example: newuser
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: password123
+        role_id:
+          type: string
+          example: role_publisher
+          description: 角色ID (role_admin, role_publisher, role_customer)
+
+    UserResponse:
+      type: object
+      properties:
+        user_id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+
+    User:
+      type: object
+      properties:
+        user_id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+
+    Role:
+      type: object
+      properties:
+        role_id:
+          type: string
+        name:
+          type: string
+          enum: [Admin, Publisher, Customer]
+        description:
+          type: string
+
+    # ========== 发布相关 ==========
+    Release:
+      type: object
+      properties:
+        release_id:
+          type: string
+        resource_type:
+          type: string
+          enum: [BSP, DRIVER, EXAMPLES]
+        version:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, ARCHIVED]
+        publisher_id:
+          type: string
+        description:
+          type: string
+        changelog:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        published_at:
+          type: string
+          format: date-time
+        packages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Package'
+
+    ReleaseListResponse:
+      type: object
+      properties:
+        releases:
+          type: array
+          items:
+            $ref: '#/components/schemas/Release'
+        count:
+          type: integer
+
+    CreateReleaseRequest:
+      type: object
+      required:
+        - resource_type
+        - version
+      properties:
+        resource_type:
+          type: string
+          enum: [BSP, DRIVER, EXAMPLES]
+        version:
+          type: string
+          example: 1.0.0
+        description:
+          type: string
+        changelog:
+          type: string
+
+    Package:
+      type: object
+      properties:
+        package_id:
+          type: string
+        content_type:
+          type: string
+          enum: [SOURCE, BINARY, DOCUMENT]
+        package_name:
+          type: string
+        version:
+          type: string
+        size:
+          type: integer
+
+    PackageListResponse:
+      type: object
+      properties:
+        packages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Package'
+        count:
+          type: integer
+
+    DownloadableReleasesResponse:
+      type: object
+      properties:
+        releases:
+          type: array
+          items:
+            $ref: '#/components/schemas/Release'
+        count:
+          type: integer
+
+    # ========== 许可证相关 ==========
+    License:
+      type: object
+      properties:
+        license_id:
+          type: string
+        organization:
+          type: string
+        access_level:
+          type: string
+          enum: [FULL_ACCESS, BINARY_ACCESS]
+        allowed_resource_types:
+          type: array
+          items:
+            type: string
+            enum: [BSP, DRIVER, EXAMPLES]
+        expires_at:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    LicenseListResponse:
+      type: object
+      properties:
+        licenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/License'
+        count:
+          type: integer
+
+    CreateLicenseRequest:
+      type: object
+      required:
+        - organization
+        - access_level
+        - allowed_resource_types
+      properties:
+        organization:
+          type: string
+          example: Acme Corp
+        access_level:
+          type: string
+          enum: [FULL_ACCESS, BINARY_ACCESS]
+        allowed_resource_types:
+          type: array
+          items:
+            type: string
+            enum: [BSP, DRIVER, EXAMPLES]
+          example: [BSP, DRIVER]
+        expires_at:
+          type: string
+          format: date-time
+        days:
+          type: integer
+          description: 有效期天数（与 expires_at 二选一）
+
+    UserLicenseResponse:
+      type: object
+      properties:
+        license:
+          $ref: '#/components/schemas/License'
+
+    # ========== 备份相关 ==========
+    BackupInfo:
+      type: object
+      properties:
+        backup_id:
+          type: string
+        filename:
+          type: string
+        size:
+          type: integer
+        checksum:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        includes_storage:
+          type: boolean
+        metadata:
+          type: object
+
+    BackupListResponse:
+      type: object
+      properties:
+        backups:
+          type: array
+          items:
+            $ref: '#/components/schemas/BackupInfo'
+        count:
+          type: integer
+
+    RestoreResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        backup_filename:
+          type: string
+        restored_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+
+    # ========== 冷备份相关 ==========
+    ColdArchiveInfo:
+      type: object
+      properties:
+        archive_id:
+          type: string
+        hot_backup_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [archived, expired, retrieved]
+        storage_type:
+          type: string
+        size:
+          type: integer
+
+    ColdArchiveListResponse:
+      type: object
+      properties:
+        archives:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColdArchiveInfo'
+        count:
+          type: integer
+
+    BackupPolicy:
+      type: object
+      properties:
+        retention_days:
+          type: integer
+        scheduler_running:
+          type: boolean
+        storage_backend:
+          type: string
+        archive_count:
+          type: integer
+
+    StorageInfo:
+      type: object
+      properties:
+        storage_type:
+          type: string
+        storage_path:
+          type: string
+        archive_count:
+          type: integer
+        total_size:
+          type: integer
+
+    # ========== 审计日志相关 ==========
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        action:
+          type: string
+          enum: [LOGIN, LOGOUT, RELEASE_CREATE, RELEASE_PUBLISH, RELEASE_ARCHIVE, DOWNLOAD, LICENSE_CREATE, LICENSE_REVOKE, BACKUP_CREATE, BACKUP_RESTORE, USER_CREATE, USER_UPDATE]
+        user_id:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+        ip_address:
+          type: string
+        resource_type:
+          type: string
+        resource_id:
+          type: string
+        resource_name:
+          type: string
+        status:
+          type: string
+        error_message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    AuditLogListResponse:
+      type: object
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLog'
+        count:
+          type: integer
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    AuditStatisticsResponse:
+      type: object
+      properties:
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        action_statistics:
+          type: object
+          additionalProperties:
+            type: integer
+        user_activity:
+          type: object
+          properties:
+            total_actions:
+              type: integer
+            unique_actions:
+              type: integer
+            last_activity:
+              type: string
+              format: date-time
