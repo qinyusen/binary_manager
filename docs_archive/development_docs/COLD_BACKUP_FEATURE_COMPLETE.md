@@ -9,8 +9,8 @@
 | 项目 | 数量 | 说明 |
 |-----|------|------|
 | **核心服务** | 1 个 | ColdBackupService (500+ 行) |
-| **存储后端** | 2 个 | 本地文件系统 + S3 |
-| **API 端点** | 8 个 | 完整的 REST API |
+| **存储后端** | 4 个 | 本地文件系统 + S3 + SFTP + FTP |
+| **API 端点** | 9 个 | 完整的 REST API |
 | **Web UI 页面** | 1 个 | 冷备份管理界面 (400+ 行) |
 | **文档** | 1 个 | 完整功能文档 |
 
@@ -76,6 +76,16 @@ class ColdStorageBackend(ABC):
 - 支持 AWS Glacier（长期归档）
 - 支持 S3 Glacier Deep Archive（深度归档）
 - 支持所有 S3 兼容存储（MinIO, Ceph 等）
+
+**3. SFTPColdStorageBackend** - SFTP 服务器 (v3.1.0 新增)
+- 支持 SSH/SFTP 协议
+- 支持密码和私钥两种认证方式
+- 适用于云端服务器
+
+**4. FTPColdStorageBackend** - FTP/FTPS 服务器 (v3.1.0 新增)
+- 支持 FTP 和 FTPS (FTP over TLS)
+- 支持被动/主动模式
+- 适用于传统 FTP 服务器
 
 ### 2. 冷备份服务功能
 

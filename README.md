@@ -35,7 +35,7 @@
 |------|------|------|
 | [部署指南](docs_archive/DEPLOYMENT_GUIDE.md) | Release Portal V3 完整部署指南 | 部署文档 |
 | [部署检查清单](docs_archive/DEPLOYMENT_CHECKLIST.md) | 部署前检查清单 | 部署文档 |
-| [Docker部署](docs_archive/DOCKERDOCKER_DEPLOYMENT.md) | Docker容器化部署指南 | 部署文档 |
+| [Docker部署](docs_archive/DOCKER_DEPLOYMENT.md) | Docker容器化部署指南 | 部署文档 |
 | [快速部署](docs_archive/deployment_docs/QUICKSTART_DEPLOYMENT.md) | 快速部署指南 | 部署文档 |
 
 ### 设计文档
@@ -84,8 +84,8 @@
 - 参考 [使用手册](docs_archive/core_docs/USER_MANUAL.md) - 详细使用方法
 
 ### 2. 开发者
-- 查看 [Binary Manager V2文档](doc/BINARY_MANAGER_V2.md) - 了解架构
-- 阅读 [V2快速入门](doc/V2_QUICKSTART.md) - 快速开始开发
+- 查看 [Binary Manager V2文档](docs_archive/binary_manager_docs/BINARY_MANAGER_V2.md) - 了解架构
+- 阅读 [V2快速入门](docs_archive/binary_manager_docs/V2_QUICKSTART.md) - 快速开始开发
 - 参考 [解耦设计](docs_archive/DECOUPLING_DESIGN.md) - 系统架构
 
 ### 3. 部署管理员
@@ -222,6 +222,6 @@ release_system/
 
 ---
 
-**文档版本**: 1.0  
-**最后更新**: 2026-03-14  
+**文档版本**: 1.1  
+**最后更新**: 2026-03-15  
 **维护者**: Release Platform Team

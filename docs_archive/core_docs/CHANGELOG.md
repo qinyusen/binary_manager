@@ -5,6 +5,32 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [3.1.0] - 2026-03-15
+
+### 新增
+- ✨ 新增 SFTP 冷备份存储后端
+- ✨ 新增 FTP/FTPS 冷备份存储后端
+- ✨ 新增 OpenAPI 文档 (Swagger UI)
+  - 访问地址: `/api/docs`
+  - 覆盖 40 个 API 端点
+  - 完整的请求/响应 Schema
+- ✨ 添加 paramiko 依赖用于 SFTP 支持
+
+### 改进
+- 🔧 修复 4 处裸异常捕获问题
+- 🔧 ReleaseService 代码精简 71% (729→212 行)
+- 🔧 DownloadService 代码精简 53% (234→110 行)
+- 🔧 拆分 cold_backup_service.py 为分层模块
+- 🔧 修复审计日志枚举值错误
+
+### 文档
+- 📝 新增 docs/FEATURES.md 功能文档
+- 📝 更新 API 文档
+
+### 测试
+- ✅ 所有 35 个单元测试通过
+- ✅ 100% 测试通过率
+
 ## [3.0.0] - 2024-01-15
 
 ### 新增

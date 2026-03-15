@@ -8,6 +8,27 @@
 
 ## ✨ 优化内容
 
+### 🟢 新增功能
+
+#### 1. SFTP 冷备份存储后端
+- 支持 SSH/SFTP 协议连接云端服务器
+- 支持密码和私钥两种认证方式
+- 自动创建远程目录
+- 远程 metadata.json 元数据管理
+
+#### 2. FTP/FTPS 冷备份存储后端
+- 支持 FTP 和 FTPS (FTP over TLS) 加密传输
+- 支持被动模式和主动模式
+- 匿名登录支持
+- 适用于传统 FTP 服务器
+
+#### 3. OpenAPI 文档 (Swagger UI)
+- 覆盖 40 个 API 端点
+- 访问地址: `http://localhost:5000/api/docs`
+- OpenAPI JSON: `http://localhost:5000/api/openapi.json`
+- 完整的请求/响应 Schema 定义
+- 支持在线测试 API
+
 ### 🔴 关键问题修复
 
 #### 1. 异常处理优化
@@ -101,4 +122,16 @@ from release_portal.application.cold_backup import ColdBackupService, ColdBackup
 ---
 
 **维护者**: Release Platform Team  
-**commit**: [Git commit hash will be added after commit
+**commit**: a6c0a1c
+
+---
+
+## 📊 更新总结
+
+| 类别 | 内容 |
+|------|------|
+| **新增功能** | SFTP 后端、FTP 后端、OpenAPI 文档 |
+| **问题修复** | 4 处裸异常捕获 |
+| **代码优化** | ReleaseService -71%、DownloadService -53% |
+| **文档更新** | FEATURES.md、API 文档 |
+| **新增依赖** | paramiko==3.3.1、PyYAML==6.0.1 |
