@@ -1422,6 +1422,9 @@ Note: SOURCE package is not available with your license level.
 - [ ] 编译产物已测试验证
 - [ ] 文档已更新
 - [ ] CHANGELOG.md 已更新
+- [ ] 运行发布前测试验证 `release-portal publish --test ...`
+- [ ] 检查许可证权限配置正确
+- [ ] 备份重要数据
 
 ### 2. 目录结构建议
 
@@ -1431,6 +1434,7 @@ project/
 ├── build/            # 编译脚本
 │   └── output/       # 编译产物（用于 BINARY 包）
 ├── document/         # 文档（用于 DOCUMENT 包）
+├── tests/            # 测试用例
 ├── scripts/          # 辅助脚本
 ├── CHANGELOG.md      # 变更日志
 └── README.md         # 项目说明
@@ -1453,6 +1457,25 @@ project/
 - 为不同客户创建不同许可证
 - 敏感项目使用 BINARY_ACCESS 许可证
 - 定期审查许可证状态
+- 启用发布前自动化测试，避免问题版本流出
+- 定期进行数据冷备份，异地存储
+- 最小权限原则：开发人员使用 Publisher 角色，不使用 Admin 账号
+
+### 5. 团队协作最佳实践
+
+**开发流程**：
+1. 功能开发完成后，运行本地测试 `pytest tests/`
+2. 提交代码前进行代码审查
+3. CI自动运行测试，全部通过后合并
+4. 发布版本前运行完整测试套件
+5. 发布后通知相关客户更新
+
+**版本分支策略**：
+- `main` 分支：生产就绪代码
+- `develop` 分支：开发分支
+- `feature/*` 分支：功能开发
+- `release/*` 分支：版本发布
+- `hotfix/*` 分支：紧急Bug修复
 
 ---
 

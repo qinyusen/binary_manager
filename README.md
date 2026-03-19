@@ -6,6 +6,8 @@
 
 | 文档 | 描述 | 位置 |
 |------|------|------|
+| [嵌入式工程师发布指南](docs/EMBEDDED_ENGINEER_GUIDE.md) | 嵌入式工程师使用指南，支持源码+文档/二进制+源码两种发布模式 | 核心文档 |
+| [项目质量评估报告](docs/PROJECT_QUALITY_ASSESSMENT.md) | 项目整体质量评估与改进建议 | 核心文档 |
 | [项目总览](docs_archive/core_docs/README.md) | Binary Manager 项目概览和快速开始指南 | 核心文档 |
 | [使用手册](docs_archive/core_docs/USER_MANUAL.md) | Release Portal V3 完整使用手册 | 核心文档 |
 | [快速入门](docs_archive/core_docs/QUICK_START.md) | 5分钟快速上手指南 | 核心文档 |
