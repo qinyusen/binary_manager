@@ -1,155 +1,118 @@
-# Release Platform - 文档中心
+# Release Portal V3
 
-## 📚 文档导航
+> 地瓜机器人软件发布管理平台 - 支持 BSP、驱动和示例程序的发布与权限控制
 
-### 核心文档
+## 项目简介
 
-| 文档 | 描述 | 位置 |
-|------|------|------|
-| [嵌入式工程师发布指南](docs/EMBEDDED_ENGINEER_GUIDE.md) | 嵌入式工程师使用指南，支持源码+文档/二进制+源码两种发布模式 | 核心文档 |
-| [项目质量评估报告](docs/PROJECT_QUALITY_ASSESSMENT.md) | 项目整体质量评估与改进建议 | 核心文档 |
-| [项目总览](docs_archive/core_docs/README.md) | Binary Manager 项目概览和快速开始指南 | 核心文档 |
-| [使用手册](docs_archive/core_docs/USER_MANUAL.md) | Release Portal V3 完整使用手册 | 核心文档 |
-| [快速入门](docs_archive/core_docs/QUICK_START.md) | 5分钟快速上手指南 | 核心文档 |
-| [变更日志](docs_archive/core_docs/CHANGELOG.md) | 版本变更记录 | 核心文档 |
-| [系统总览](docs_archive/core_docs/RELEASE_SYSTEM_README.md) | 地瓜机器人发布系统总览 | 核心文档 |
+Release Portal V3 是一个企业级软件发布管理平台，专为嵌入式系统开发场景设计。平台支持多资源类型（BSP、驱动、示例程序）的发布管理，并提供基于许可证的细粒度权限控制。
 
-### 开发文档
+### 核心特性
 
-| 文档 | 描述 | 位置 |
-|------|------|------|
-| [自动化测试完成](docs_archive/development_docs/AUTO_TESTS_COMPLETE.md) | 自动化测试功能实现总结 | 开发文档 |
-| [自动化测试特性](docs_archive/development_docs/AUTO_TESTS_FEATURE.md) | 自动化测试功能详细说明 | 开发文档 |
-| [备份功能完成](docs_archive/development_docs/BACKUP_FEATURE_COMPLETE.md) | 备份功能实现总结 | 开发文档 |
-| [备份功能文档](docs_archive/development_docs/BACKUP_FEATURE_DOCUMENTATION.md) | 备份功能完整文档 | 开发文档 |
-| [备份解决方案](docs_archive/development_docs/BACKUP_SOLUTIONS_SUMMARY.md) | 备份解决方案总结 | 开发文档 |
-| [冷备份功能](docs_archive/development_docs/COLD_BACKUP_FEATURE_COMPLETE.md) | 冷备份功能实现 | 开发文档 |
-| [代码改进总结](docs_archive/development_docs/CODE_IMPROVEMENTS_SUMMARY.md) | 代码改进和优化总结 | 开发文档 |
-| [代码审查](docs_archive/development_docs/CODE_REVIEW_RELEASE_DOWNLOAD_SERVER.md) | 代码审查报告 | 开发文档 |
-| [集成测试总结](docs_archive/development_docs/INTEGRATION_TESTS_SUMMARY.md) | 集成测试总结 | 开发文档 |
-| [Phase2集成测试](docs_archive/development_docs/PHASE2_INTEGRATION_TESTS_COMPLETE.md) | Phase2阶段集成测试 | 开发文档 |
-| [Phase2总结](docs_archive/development_docs/PHASE2_SUMMARY.md) | Phase2开发总结 | 开发文档 |
-| [TDD重构总结](docs_archive/development_docs/TDD_REFACTORING_SUMMARY.md) | 测试驱动开发重构总结 | 开发文档 |
+- **多资源类型支持**：BSP（板级支持包）、DRIVER（驱动程序）、EXAMPLES（示例程序）
+- **多内容类型**：SOURCE（源码）、BINARY（二进制）、DOCUMENT（文档）
+- **许可证权限控制**：FULL_ACCESS（完全访问）vs BINARY_ACCESS（仅二进制）
+- **角色管理**：Admin、Publisher、Customer 三级权限
+- **双界面**：完整的 CLI 工具 + Web 管理界面
+- **数据安全**：热备份 + 冷备份，支持 S3/SFTP/FTP 等多种存储后端
+- **自动化测试**：发布前自动运行测试套件，确保质量
 
-### 部署文档
+## 快速开始
 
-| 文档 | 描述 | 位置 |
-|------|------|------|
-| [部署指南](docs_archive/DEPLOYMENT_GUIDE.md) | Release Portal V3 完整部署指南 | 部署文档 |
-| [部署检查清单](docs_archive/DEPLOYMENT_CHECKLIST.md) | 部署前检查清单 | 部署文档 |
-| [Docker部署](docs_archive/DOCKER_DEPLOYMENT.md) | Docker容器化部署指南 | 部署文档 |
-| [快速部署](docs_archive/deployment_docs/QUICKSTART_DEPLOYMENT.md) | 快速部署指南 | 部署文档 |
+### 环境要求
 
-### 设计文档
+- Python 3.11+
+- SQLite 3
 
-| 文档 | 描述 | 位置 |
-|------|------|------|
-| [解耦设计](docs_archive/DECOUPLING_DESIGN.md) | 账号系统与存储系统解耦设计 | 设计文档 |
-| [实现总结](docs_archive/IMPLEMENTATION_SUMMARY.md) | Release Portal V3 实施总结 | 设计文档 |
-| [Web UI页面总结](docs_archive/WEB_UI_PAGES_SUMMARY.md) | Web用户界面页面总结 | 设计文档 |
+### 安装
 
-### Binary Manager V2 文档
+```bash
+# 克隆项目
+git clone https://github.com/qinyusen/release_system.git
+cd release_system
 
-| 文档 | 描述 | 位置 |
-|------|------|------|
-| [Binary Manager V2](docs_archive/binary_manager_docs/BINARY_MANAGER_V2.md) | Binary Manager V2 完整文档 | BM V2文档 |
-| [V2快速入门](docs_archive/binary_manager_docs/V2_QUICKSTART.md) | Binary Manager V2 快速入门 | BM V2文档 |
-| [项目文件说明](docs_archive/binary_manager_docs/PROJECT_FILES.md) | 项目文件结构说明 | BM V2文档 |
-| [发布工具指南](docs_archive/binary_manager_docs/PUBLISH_TOOL_GUIDE.md) | 交互式发布工具指南 | BM V2文档 |
-| [分包发布指南](docs_archive/binary_manager_docs/SPLIT_PACKAGES_GUIDE.md) | 分包发布指南 | BM V2文档 |
-| [快速参考](docs_archive/binary_manager_docs/QUICK_REFERENCE.md) | 命令和API快速参考 | BM V2文档 |
-| [设计文档审查](docs_archive/binary_manager_docs/DESIGN_DOC_REVIEW.md) | 设计文档审查报告 | BM V2文档 |
-| [设计更新总结](docs_archive/binary_manager_docs/DESIGN_UPDATE_SUMMARY.md) | 设计更新总结 | BM V2文档 |
-| [系统设计](docs_archive/binary_manager_docs/design.md) | 系统架构设计文档 | BM V2文档 |
-| [变更日志](docs_archive/binary_manager_docs/CHANGELOG.md) | Binary Manager V2 变更日志 | BM V2文档 |
-
-### 示例文档
-
-| 文档 | 描述 | 位置 |
-|------|------|------|
-| [示例总览](examples/README.md) | 示例程序总览 | examples/ |
-| [BSP使用指南](examples/BSP_README.md) | 嵌入式Linux BSP使用指南 | examples/ |
-| [BSP包文档](examples/bsp_package/README.md) | BSP包详细说明 | examples/bsp_package/ |
-| [BSP文档](examples/bsp_package/docs/README.md) | BSP包文档 | examples/bsp_package/docs/ |
-| [BSP Bootloader](examples/bsp_package/bootloader/README.md) | Bootloader文档 | examples/bsp_package/bootloader/ |
-| [BSP Kernel](examples/bsp_package/kernel/BSPKernel.md) | Kernel文档 | examples/bsp_package/kernel/ |
-| [简单应用](examples/simple_app/README.md) | 简单计算器应用示例 | examples/simple_app/ |
-| [Web应用](examples/web_app/README.md) | Web服务器应用示例 | examples/web_app/ |
-| [CLI工具](examples/cli_tool/README.md) | 命令行工具示例 | examples/cli_tool/ |
-
----
-
-## 🚀 快速开始
-
-### 1. 新手入门
-- 阅读 [快速入门](docs_archive/core_docs/QUICK_START.md) - 5分钟上手
-- 参考 [使用手册](docs_archive/core_docs/USER_MANUAL.md) - 详细使用方法
-
-### 2. 开发者
-- 查看 [Binary Manager V2文档](docs_archive/binary_manager_docs/BINARY_MANAGER_V2.md) - 了解架构
-- 阅读 [V2快速入门](docs_archive/binary_manager_docs/V2_QUICKSTART.md) - 快速开始开发
-- 参考 [解耦设计](docs_archive/DECOUPLING_DESIGN.md) - 系统架构
-
-### 3. 部署管理员
-- 按照 [部署指南](docs_archive/DEPLOYMENT_GUIDE.md) - 完整部署流程
-- 检查 [部署检查清单](docs_archive/DEPLOYMENT_CHECKLIST.md) - 部署前检查
-
-### 4. 示例学习
-- 浏览 [示例总览](examples/README.md) - 所有示例
-- 运行 [BSP示例](examples/BSP_README.md) - 嵌入式Linux示例
-
----
-
-## 📁 文档结构
-
-```
-release_system/
-├── docs_archive/              # 归档文档
-│   ├── core_docs/            # 核心文档
-│   │   ├── README.md         # 项目总览
-│   │   ├── USER_MANUAL.md    # 使用手册
-│   │   ├── QUICK_START.md    # 快速入门
-│   │   ├── CHANGELOG.md      # 变更日志
-│   │   └── RELEASE_SYSTEM_README.md
-│   ├── development_docs/     # 开发文档
-│   │   ├── AUTO_TESTS_*.md   # 自动化测试
-│   │   ├── BACKUP_*.md       # 备份功能
-│   │   ├── CODE_*.md         # 代码相关
-│   │   └── INTEGRATION_*.md  # 集成测试
-│   ├── deployment_docs/      # 部署文档
-│   ├── binary_manager_docs/  # Binary Manager V2 文档
-│   │   ├── BINARY_MANAGER_V2.md
-│   │   ├── V2_QUICKSTART.md
-│   │   ├── PROJECT_FILES.md
-│   │   ├── PUBLISH_TOOL_GUIDE.md
-│   │   ├── SPLIT_PACKAGES_GUIDE.md
-│   │   ├── QUICK_REFERENCE.md
-│   │   ├── DESIGN_DOC_REVIEW.md
-│   │   ├── DESIGN_UPDATE_SUMMARY.md
-│   │   ├── design.md
-│   │   └── CHANGELOG.md
-│   ├── DEPLOYMENT_GUIDE.md   # 完整部署指南
-│   ├── DEPLOYMENT_CHECKLIST.md
-│   ├── DOCKER_DEPLOYMENT.md
-│   ├── DECOUPLING_DESIGN.md  # 解耦设计
-│   ├── IMPLEMENTATION_SUMMARY.md
-│   └── WEB_UI_PAGES_SUMMARY.md
-└── examples/                 # 示例文档
-    ├── README.md
-    ├── BSP_README.md
-    ├── bsp_package/
-    │   ├── README.md
-    │   ├── docs/README.md
-    │   ├── bootloader/README.md
-    │   └── kernel/BSPKernel.md
-    ├── simple_app/README.md
-    ├── web_app/README.md
-    └── cli_tool/README.md
+# 安装依赖
+pip install -r release_portal/requirements_v3.txt
 ```
 
----
+### 初始化
 
-## 🎯 系统架构
+```bash
+# 初始化数据库
+release-portal init
+
+# 创建管理员账户
+release-portal register admin admin@example.com admin123 --role Admin
+
+# 登录
+release-portal login admin
+
+# 验证
+release-portal whoami
+```
+
+### Docker 部署
+
+```bash
+# 构建并启动
+docker-compose up -d
+
+# 访问
+# Web UI: http://localhost:5000
+```
+
+## 使用指南
+
+### CLI 常用命令
+
+```bash
+# === 用户管理 ===
+release-portal login <username>
+release-portal logout
+release-portal whoami
+release-portal register <username> <email> <password> --role <role>
+
+# === 发布管理 ===
+release-portal publish create --type BSP --version 1.0.0 --description "描述"
+release-portal publish add-package <release_id> --content-type SOURCE --source ./src
+release-portal publish publish <release_id>
+release-portal list
+
+# === 下载管理 ===
+release-portal download list <release_id>
+release-portal download download <release_id>
+
+# === 许可证管理 ===
+release-portal license create --organization <name> --level FULL_ACCESS --types BSP,DRIVER
+release-portal license list
+release-portal license extend <license_id> --days 365
+```
+
+### Web 界面
+
+```bash
+# 启动 Web 服务
+export FLASK_APP=release_portal.presentation.web.app
+flask run --host 0.0.0.0 --port 5000
+
+# 访问 http://localhost:5000
+```
+
+### API 接口
+
+```bash
+# 登录获取 Token
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "admin123"}'
+
+# 创建发布
+curl -X POST http://localhost:5000/api/releases \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"resource_type": "BSP", "version": "1.0.0", "description": "BSP v1.0.0"}'
+```
+
+## 架构设计
 
 ### 洋葱架构
 
@@ -165,65 +128,169 @@ release_system/
 └─────────────────────────────────────────┘
 ```
 
-### 核心功能
+### 目录结构
 
-- **包管理**：发布、下载、版本管理
-- **存储系统**：本地存储、S3云存储
-- **Git集成**：commit追踪、branch、tag
-- **权限控制**：用户管理、许可证管理
-- **分组管理**：批量部署相关包
-- **备份恢复**：热备份、冷备份
+```
+release_portal/
+├── domain/              # 领域层
+│   ├── entities/        # 实体：User, Role, License, Release
+│   ├── value_objects/   # 值对象：ResourceType, ContentType, AccessLevel
+│   ├── repositories/    # 仓储接口
+│   └── services/        # 领域服务接口
+├── infrastructure/      # 基础设施层
+│   ├── database/        # SQLite 实现
+│   └── auth/            # JWT Token 服务
+├── application/         # 应用层
+│   ├── auth_service.py          # 认证
+│   ├── authorization_service.py # 授权
+│   ├── release_service.py       # 发布
+│   ├── download_service.py      # 下载
+│   ├── license_service.py       # 许可证
+│   ├── backup_service.py        # 热备份
+│   └── cold_backup/             # 冷备份
+├── presentation/        # 表现层
+│   ├── cli/             # 命令行界面
+│   └── web/             # Web 界面 + REST API
+└── shared/              # 共享模块
+```
 
----
+## 权限模型
 
-## 🔍 搜索文档
+### 角色权限
 
-### 按主题
+| 角色 | 发布 | 下载 | 用户管理 | 许可证管理 |
+|------|:----:|:----:|:--------:|:----------:|
+| Admin | ✓ | ✓ | ✓ | ✓ |
+| Publisher | ✓ | ✓ | ✗ | ✗ |
+| Customer | ✗ | * | ✗ | ✗ |
 
-- **安装和部署**：[部署指南](docs_archive/DEPLOYMENT_GUIDE.md)、[Docker部署](docs_archive/DOCKER_DEPLOYMENT.md)
-- **使用方法**：[使用手册](docs_archive/core_docs/USER_MANUAL.md)、[快速入门](docs_archive/core_docs/QUICK_START.md)
-- **架构设计**：[解耦设计](docs_archive/DECOUPLING_DESIGN.md)、[系统设计](docs_archive/binary_manager_docs/design.md)
-- **开发指南**：[Binary Manager V2](docs_archive/binary_manager_docs/BINARY_MANAGER_V2.md)、[V2快速入门](docs_archive/binary_manager_docs/V2_QUICKSTART.md)
-- **测试**：[自动化测试](docs_archive/development_docs/AUTO_TESTS_FEATURE.md)、[集成测试](docs_archive/development_docs/INTEGRATION_TESTS_SUMMARY.md)
-- **备份**：[备份功能文档](docs_archive/development_docs/BACKUP_FEATURE_DOCUMENTATION.md)、[冷备份](docs_archive/development_docs/COLD_BACKUP_FEATURE_COMPLETE.md)
+*Customer 的下载权限由许可证决定
 
-### 按用户角色
+### 许可证级别
 
-- **管理员**：[部署指南](docs_archive/DEPLOYMENT_GUIDE.md)、[用户管理](docs_archive/core_docs/USER_MANUAL.md#用户管理)
-- **开发者**：[Binary Manager V2](docs_archive/binary_manager_docs/BINARY_MANAGER_V2.md)、[发布工具指南](docs_archive/binary_manager_docs/PUBLISH_TOOL_GUIDE.md)
-- **客户**：[使用手册](docs_archive/core_docs/USER_MANUAL.md#下载管理)、[快速入门](docs_archive/core_docs/QUICK_START.md)
+| 级别 | 源码 | 二进制 | 文档 |
+|------|:----:|:------:|:----:|
+| FULL_ACCESS | ✓ | ✓ | ✓ |
+| BINARY_ACCESS | ✗ | ✓ | ✓ |
 
----
+## 功能模块
 
-## 📖 文档更新记录
+### 发布管理
 
-### 最新更新
+- 支持三种资源类型：BSP、DRIVER、EXAMPLES
+- 每个发布可包含多个包（源码/二进制/文档）
+- 支持 Git commit 信息提取
+- 发布状态管理：草稿 → 已发布 → 已归档
 
-- **2026-03-06**: 整理文档结构，创建文档中心
-- **2026-03-01**: 完成自动测试功能
-- **2026402-01**: 完成备份功能
-- **2024-01-15**: Release Portal V3 发布
+### 下载管理
 
-### 详细变更
+- 基于许可证的权限控制
+- 支持按内容类型下载
+- 下载审计日志
 
-参见 [变更日志](docs_archive/core_docs/CHANGELOG.md) 和 [Binary Manager V2变更日志](docs_archive/binary_manager_docs/CHANGELOG.md)
+### 备份恢复
 
----
+- **热备份**：快速恢复，支持数据库 + 存储文件
+- **冷备份**：长期归档，支持多种后端：
+  - 本地文件系统
+  - AWS S3 / Glacier
+  - SFTP 服务器
+  - FTP 服务器
 
-## 🤝 贡献
+### 自动化测试
 
-欢迎贡献文档！请修改或添加文档后更新此索引文件。
+发布前可选运行测试套件：
 
----
+```bash
+release-portal publish --type BSP --version 1.0.0 --test
+release-portal publish --type BSP --version 1.0.0 --test --test-level all
+```
 
-## 📞 联系方式
+测试级别：`critical`（默认）、`all`、`api`、`integration`
 
-- **项目主页**: https://github.com/qinyusen/binary_manager
+## 配置
+
+### 环境变量
+
+```bash
+# 数据库
+export RELEASE_PORTAL_DB="./data/portal.db"
+
+# 安全配置
+export RELEASE_PORTAL_SECRET="your-secret-key"
+export RELEASE_PORTAL_TOKEN_EXPIRY_HOURS=24
+
+# 存储配置
+export RELEASE_PORTAL_STORAGE_DIR="./storage"
+export RELEASE_PORTAL_MAX_UPLOAD_SIZE=500  # MB
+
+# 备份配置
+export RELEASE_PORTAL_BACKUP_DIR="./backups"
+export RELEASE_PORTAL_BACKUP_RETENTION_DAYS=30
+```
+
+## 开发
+
+### 运行测试
+
+```bash
+# 安装测试依赖
+pip install -r requirements-test.txt
+
+# 运行全部测试
+python run_tests.sh
+
+# 运行单元测试
+pytest tests/unit -v
+
+# 运行 API 测试
+pytest tests/api -v
+
+# 运行集成测试
+pytest tests/integration -v
+```
+
+### 代码质量
+
+```bash
+# Lint
+ruff check .
+
+# Format
+ruff format .
+```
+
+## 文档导航
+
+### 快速入门
+
+- [嵌入式工程师发布指南](docs/EMBEDDED_ENGINEER_GUIDE.md) - 完整使用指南
+- [功能概览](docs/FEATURES.md) - 系统功能介绍
+
+### 详细文档
+
+| 文档 | 描述 |
+|------|------|
+| [使用手册](docs_archive/core_docs/USER_MANUAL.md) | 完整使用说明 |
+| [部署指南](docs_archive/DEPLOYMENT_GUIDE.md) | 生产环境部署 |
+| [Docker部署](docs_archive/DOCKER_DEPLOYMENT.md) | 容器化部署 |
+| [解耦设计](docs_archive/DECOUPLING_DESIGN.md) | 系统架构设计 |
+
+### 归档文档
+
+- [核心文档](docs_archive/core_docs/) - 项目总览、快速入门、变更日志
+- [开发文档](docs_archive/development_docs/) - 自动化测试、备份功能、代码改进
+- [Binary Manager V2](docs_archive/binary_manager_docs/) - V2 版本文档
+
+## 许可证
+
+MIT License
+
+## 联系方式
+
 - **问题反馈**: https://github.com/qinyusen/release_system/issues
-- **技术支持**: [TODO: 添加联系方式]
+- **项目主页**: https://github.com/qinyusen/release_system
 
 ---
 
-**文档版本**: 1.1  
-**最后更新**: 2026-03-15  
-**维护者**: Release Platform Team
+**版本**: 3.1.0 | **更新日期**: 2026-03-19 | **维护团队**: Release Platform Team
